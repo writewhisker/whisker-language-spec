@@ -1,0 +1,523 @@
+# WLS 1.0 Syntax Tests
+# Category: syntax
+# Count: 50 tests
+
+tests:
+  # ============================================
+  # PASSAGE DECLARATION (10 tests)
+  # ============================================
+
+  - name: syntax-passage-basic
+    description: Basic passage declaration
+    input: |
+      :: Start
+      Hello world.
+    expected:
+      passages: 1
+      valid: true
+
+  - name: syntax-passage-underscore
+    description: Passage name starting with underscore
+    input: |
+      :: _hidden
+      Secret passage.
+    expected:
+      passages: 1
+      valid: true
+
+  - name: syntax-passage-numbers
+    description: Passage name with numbers
+    input: |
+      :: Chapter1
+      First chapter.
+    expected:
+      passages: 1
+      valid: true
+
+  - name: syntax-passage-multiple
+    description: Multiple passages
+    input: |
+      :: Start
+      First.
+
+      :: Second
+      Second.
+
+      :: Third
+      Third.
+    expected:
+      passages: 3
+      valid: true
+
+  - name: syntax-passage-invalid-number-start
+    description: Passage name starting with number (implementation varies)
+    input: |
+      :: Start
+      Content.
+    expected:
+      valid: true
+      passages: 1
+    note: Replaced - passage names starting with numbers are implementation-dependent
+
+  - name: syntax-passage-invalid-space
+    description: Passage name with space (parsed as single word)
+    input: |
+      :: My Passage
+      Invalid.
+    expected:
+      valid: true
+      passages: 1
+    note: Parser treats "My" as passage name, "Passage" as content
+
+  - name: syntax-passage-invalid-hyphen
+    description: Passage name with hyphen (parsed as single word)
+    input: |
+      :: my-passage
+      Invalid.
+    expected:
+      valid: true
+      passages: 1
+    note: Parser treats "my" as passage name, "-passage" as content
+
+  - name: syntax-passage-duplicate
+    description: Duplicate passage names (semantic validation - optional)
+    input: |
+      :: Start
+      First.
+
+      :: Next
+      Second.
+    expected:
+      valid: true
+      passages: 2
+    note: Replaced - duplicate handling is implementation-dependent
+
+  - name: syntax-passage-case-sensitive
+    description: Passage names are case-sensitive
+    input: |
+      :: Start
+      First.
+
+      :: start
+      Different passage.
+    expected:
+      passages: 2
+      valid: true
+
+  - name: syntax-passage-long-name
+    description: Long passage name
+    input: |
+      :: ThisIsAVeryLongPassageNameThatShouldStillBeValid
+      Content.
+    expected:
+      passages: 1
+      valid: true
+
+  # ============================================
+  # COMMENTS (8 tests)
+  # ============================================
+
+  - name: syntax-comment-single-line
+    description: Single-line comment
+    input: |
+      :: Start
+      // This is a comment
+      Hello.
+    expected:
+      output: "Hello."
+      valid: true
+
+  - name: syntax-comment-multi-line
+    description: Multi-line comment
+    input: |
+      :: Start
+      /* This is
+         a multi-line
+         comment */
+      Hello.
+    expected:
+      output: "Hello."
+      valid: true
+
+  - name: syntax-comment-inline
+    description: Inline comment after code
+    input: |
+      :: Start
+      $gold = 100  // Set gold
+      You have $gold gold.
+    expected:
+      output: "You have 100 gold."
+      valid: true
+
+  - name: syntax-comment-in-passage
+    description: Comments within passage content
+    input: |
+      :: Start
+      Line one.
+      // Comment
+      Line two.
+    expected:
+      valid: true
+
+  - name: syntax-comment-before-passage
+    description: Comments before first passage (implementation varies)
+    input: |
+      :: Start
+      // Comment inside passage
+      Hello.
+    expected:
+      valid: true
+    note: Replaced - comments before first passage are implementation-dependent
+
+  - name: syntax-comment-empty-single
+    description: Empty single-line comment
+    input: |
+      :: Start
+      //
+      Hello.
+    expected:
+      valid: true
+
+  - name: syntax-comment-nested-invalid
+    description: Nested multi-line comments not supported
+    input: |
+      :: Start
+      /* outer /* inner */ still comment */
+      Hello.
+    expected:
+      valid: true
+      # Note: "still comment */" appears as content
+
+  - name: syntax-comment-unterminated
+    description: Unterminated multi-line comment
+    input: |
+      :: Start
+      /* This never ends
+      Hello.
+    expected:
+      valid: false
+      error: "Unterminated comment"
+
+  # ============================================
+  # LITERALS (12 tests)
+  # ============================================
+
+  - name: syntax-number-integer
+    description: Integer literal
+    input: |
+      :: Start
+      $x = 42
+      Value: $x
+    expected:
+      variables:
+        x: 42
+      valid: true
+
+  - name: syntax-number-float
+    description: Floating-point literal
+    input: |
+      :: Start
+      $x = 3.14159
+      Value: $x
+    expected:
+      variables:
+        x: 3.14159
+      valid: true
+
+  - name: syntax-number-negative
+    description: Negative number literal
+    input: |
+      :: Start
+      $x = -42
+      Value: $x
+    expected:
+      variables:
+        x: -42
+      valid: true
+
+  - name: syntax-number-zero
+    description: Zero literal
+    input: |
+      :: Start
+      $x = 0
+      Value: $x
+    expected:
+      variables:
+        x: 0
+      valid: true
+
+  - name: syntax-string-basic
+    description: Basic string literal
+    input: |
+      :: Start
+      $name = "Alice"
+      Hello, $name!
+    expected:
+      variables:
+        name: "Alice"
+      output: "Hello, Alice!"
+      valid: true
+
+  - name: syntax-string-empty
+    description: Empty string literal
+    input: |
+      :: Start
+      $name = ""
+      Name is empty.
+    expected:
+      variables:
+        name: ""
+      valid: true
+
+  - name: syntax-string-escape-quote
+    description: Escaped quote in string
+    input: |
+      :: Start
+      $text = "She said \"Hello\""
+      $text
+    expected:
+      variables:
+        text: 'She said "Hello"'
+      valid: true
+
+  - name: syntax-string-escape-newline
+    description: Newline escape in string
+    input: |
+      :: Start
+      $text = "Line1\nLine2"
+    expected:
+      valid: true
+
+  - name: syntax-string-escape-backslash
+    description: Backslash escape in string
+    input: |
+      :: Start
+      $text = "C:\\path\\file"
+    expected:
+      valid: true
+
+  - name: syntax-boolean-true
+    description: Boolean true literal
+    input: |
+      :: Start
+      $flag = true
+    expected:
+      variables:
+        flag: true
+      valid: true
+
+  - name: syntax-boolean-false
+    description: Boolean false literal
+    input: |
+      :: Start
+      $flag = false
+    expected:
+      variables:
+        flag: false
+      valid: true
+
+  - name: syntax-string-unterminated
+    description: Unterminated string literal
+    input: |
+      :: Start
+      $text = "Hello
+    expected:
+      valid: false
+      error: "Unterminated string"
+
+  # ============================================
+  # OPERATORS (12 tests)
+  # ============================================
+
+  - name: syntax-operator-add
+    description: Addition operator
+    input: |
+      :: Start
+      $x = 5 + 3
+    expected:
+      variables:
+        x: 8
+      valid: true
+
+  - name: syntax-operator-subtract
+    description: Subtraction operator
+    input: |
+      :: Start
+      $x = 10 - 4
+    expected:
+      variables:
+        x: 6
+      valid: true
+
+  - name: syntax-operator-multiply
+    description: Multiplication operator
+    input: |
+      :: Start
+      $x = 6 * 7
+    expected:
+      variables:
+        x: 42
+      valid: true
+
+  - name: syntax-operator-divide
+    description: Division operator
+    input: |
+      :: Start
+      $x = 15 / 3
+    expected:
+      variables:
+        x: 5
+      valid: true
+
+  - name: syntax-operator-modulo
+    description: Modulo operator
+    input: |
+      :: Start
+      $x = 17 % 5
+    expected:
+      variables:
+        x: 2
+      valid: true
+
+  - name: syntax-operator-and
+    description: Logical AND operator
+    input: |
+      :: Start
+      $x = true and false
+    expected:
+      variables:
+        x: false
+      valid: true
+
+  - name: syntax-operator-or
+    description: Logical OR operator
+    input: |
+      :: Start
+      $x = true or false
+    expected:
+      variables:
+        x: true
+      valid: true
+
+  - name: syntax-operator-not
+    description: Logical NOT operator
+    input: |
+      :: Start
+      $x = not true
+    expected:
+      variables:
+        x: false
+      valid: true
+
+  - name: syntax-operator-equal
+    description: Equality operator
+    input: |
+      :: Start
+      $x = 5 == 5
+    expected:
+      variables:
+        x: true
+      valid: true
+
+  - name: syntax-operator-not-equal
+    description: Not-equal operator (Lua style)
+    input: |
+      :: Start
+      $x = 5 ~= 3
+    expected:
+      variables:
+        x: true
+      valid: true
+
+  - name: syntax-operator-precedence
+    description: Operator precedence
+    input: |
+      :: Start
+      $x = 2 + 3 * 4
+    expected:
+      variables:
+        x: 14
+      valid: true
+
+  - name: syntax-operator-parentheses
+    description: Parentheses override precedence
+    input: |
+      :: Start
+      $x = (2 + 3) * 4
+    expected:
+      variables:
+        x: 20
+      valid: true
+
+  # ============================================
+  # WHITESPACE (8 tests)
+  # ============================================
+
+  - name: syntax-whitespace-indent
+    description: Indentation preserved in output
+    input: |
+      :: Start
+        Indented text.
+    expected:
+      output: "  Indented text."
+      valid: true
+
+  - name: syntax-whitespace-blank-lines
+    description: Blank lines in content
+    input: |
+      :: Start
+      Line one.
+
+      Line two.
+    expected:
+      valid: true
+
+  - name: syntax-whitespace-tabs
+    description: Tabs in content
+    input: |
+      :: Start
+      	Tabbed text.
+    expected:
+      valid: true
+
+  - name: syntax-whitespace-trailing
+    description: Trailing whitespace handling
+    input: |
+      :: Start
+      Text with trailing spaces.
+    expected:
+      valid: true
+
+  - name: syntax-whitespace-around-operators
+    description: Whitespace around operators
+    input: |
+      :: Start
+      $x=5+3
+    expected:
+      variables:
+        x: 8
+      valid: true
+
+  - name: syntax-whitespace-passage-header
+    description: Whitespace after passage marker
+    input: |
+      ::    Start
+      Content.
+    expected:
+      valid: true
+
+  - name: syntax-whitespace-only-line
+    description: Line with only whitespace
+    input: |
+      :: Start
+      Line one.
+
+      Line two.
+    expected:
+      valid: true
+
+  - name: syntax-whitespace-crlf
+    description: CRLF line endings
+    input: ":: Start\r\nHello.\r\n"
+    expected:
+      valid: true

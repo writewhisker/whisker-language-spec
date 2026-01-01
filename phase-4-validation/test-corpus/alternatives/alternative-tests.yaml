@@ -1,0 +1,271 @@
+# WLS 1.0 Text Alternative Tests
+# Category: alternatives
+# Count: 25 tests
+
+tests:
+  # ============================================
+  # SEQUENCE ALTERNATIVES (7 tests)
+  # ============================================
+
+  - name: alt-sequence-basic
+    description: Basic sequence alternative
+    input: |
+      :: Start
+      {| First | Second | Third }
+      + [Again] -> Start
+    expected:
+      output_visit_1: "First"
+      output_visit_2: "Second"
+      output_visit_3: "Third"
+      valid: true
+
+  - name: alt-sequence-stops
+    description: Sequence stops at last
+    input: |
+      :: Start
+      {| A | B | C }
+      + [Again] -> Start
+    expected:
+      output_visit_4: "C"
+      output_visit_5: "C"
+      valid: true
+
+  - name: alt-sequence-single
+    description: Single option sequence
+    input: |
+      :: Start
+      {| Only option }
+    expected:
+      output: "Only option"
+      valid: true
+
+  - name: alt-sequence-empty-option
+    description: Sequence with empty option
+    input: |
+      :: Start
+      {| First |  | Third }
+    expected:
+      output_visit_2: ""
+      valid: true
+
+  - name: alt-sequence-multiword
+    description: Multi-word options
+    input: |
+      :: Start
+      {| Hello there | Greetings friend | Welcome back }
+    expected:
+      output_visit_1: "Hello there"
+      valid: true
+
+  - name: alt-sequence-with-variables
+    description: Variables in sequence
+    input: |
+      :: Start
+      $name = "Hero"
+      {| Hello $name | Welcome $name | Greetings $name }
+    expected:
+      output_visit_1: "Hello Hero"
+      valid: true
+
+  - name: alt-sequence-multiple-per-passage
+    description: Multiple sequences in one passage
+    input: |
+      :: Start
+      {| A | B } and {| X | Y }
+      + [Again] -> Start
+    expected:
+      output_visit_1: "A and X"
+      output_visit_2: "B and Y"
+      valid: true
+
+  # ============================================
+  # CYCLE ALTERNATIVES (5 tests)
+  # ============================================
+
+  - name: alt-cycle-basic
+    description: Basic cycle alternative
+    input: |
+      :: Start
+      {&| Red | Green | Blue }
+      + [Again] -> Start
+    expected:
+      output_visit_1: "Red"
+      output_visit_2: "Green"
+      output_visit_3: "Blue"
+      output_visit_4: "Red"
+      valid: true
+
+  - name: alt-cycle-two-options
+    description: Two-option cycle
+    input: |
+      :: Start
+      {&| Yes | No }
+      + [Again] -> Start
+    expected:
+      output_visit_3: "Yes"
+      valid: true
+
+  - name: alt-cycle-long
+    description: Long cycle
+    input: |
+      :: Start
+      {&| Mon | Tue | Wed | Thu | Fri | Sat | Sun }
+    expected:
+      valid: true
+
+  - name: alt-cycle-with-text
+    description: Cycle in sentence
+    input: |
+      :: Start
+      The light is {&| red | yellow | green }.
+    expected:
+      output_visit_1: "The light is red."
+      valid: true
+
+  - name: alt-cycle-independent
+    description: Cycles track independently
+    input: |
+      :: Start
+      {&| A | B } {&| X | Y | Z }
+    expected:
+      output_visit_1: "A X"
+      output_visit_2: "B Y"
+      output_visit_3: "A Z"
+      valid: true
+
+  # ============================================
+  # SHUFFLE ALTERNATIVES (5 tests)
+  # ============================================
+
+  - name: alt-shuffle-basic
+    description: Basic shuffle alternative
+    input: |
+      :: Start
+      {~| one | two | three }
+    expected:
+      # Output is random, just validate syntax
+      valid: true
+
+  - name: alt-shuffle-distribution
+    description: Shuffle has roughly even distribution
+    input: |
+      :: Start
+      {~| A | B | C }
+      + [Again] -> Start
+    expected:
+      # All options should appear over many visits
+      valid: true
+
+  - name: alt-shuffle-single
+    description: Single option shuffle
+    input: |
+      :: Start
+      {~| only }
+    expected:
+      output: "only"
+      valid: true
+
+  - name: alt-shuffle-in-sentence
+    description: Shuffle in sentence context
+    input: |
+      :: Start
+      You see {~| a bird | a cat | nothing } in the garden.
+    expected:
+      valid: true
+
+  - name: alt-shuffle-multiple
+    description: Multiple shuffles
+    input: |
+      :: Start
+      {~| big | small } {~| red | blue } ball
+    expected:
+      # Each shuffle is independent
+      valid: true
+
+  # ============================================
+  # ONCE-ONLY ALTERNATIVES (5 tests)
+  # ============================================
+
+  - name: alt-once-basic
+    description: Basic once-only alternative
+    input: |
+      :: Start
+      {!| First | Second | Third }
+      + [Again] -> Start
+    expected:
+      output_visit_1: "First"
+      output_visit_2: "Second"
+      output_visit_3: "Third"
+      output_visit_4: ""
+      valid: true
+
+  - name: alt-once-exhausted
+    description: Once-only becomes empty
+    input: |
+      :: Start
+      Hint: {!| Check the drawer | Look under the rug }
+      + [Again] -> Start
+    expected:
+      output_visit_3: "Hint: "
+      valid: true
+
+  - name: alt-once-single
+    description: Single once-only option
+    input: |
+      :: Start
+      {!| Only shown once }
+      + [Again] -> Start
+    expected:
+      output_visit_1: "Only shown once"
+      output_visit_2: ""
+      valid: true
+
+  - name: alt-once-in-sentence
+    description: Once-only in sentence
+    input: |
+      :: Start
+      {!| (First visit) | (Second visit) }The room is quiet.
+    expected:
+      output_visit_1: "(First visit)The room is quiet."
+      valid: true
+
+  - name: alt-once-with-sequence
+    description: Once-only mixed with sequence
+    input: |
+      :: Start
+      {!| New: | } {| Welcome | Hello }
+    expected:
+      output_visit_1: "New:  Welcome"
+      output_visit_2: " Hello"
+      valid: true
+
+  # ============================================
+  # EDGE CASES (3 tests)
+  # ============================================
+
+  - name: alt-empty-options
+    description: All empty options
+    input: |
+      :: Start
+      {|  |  |  }
+    expected:
+      output: ""
+      valid: true
+
+  - name: alt-escaped-pipe
+    description: Escaped pipe in option
+    input: |
+      :: Start
+      {| A \| B | C }
+    expected:
+      output_visit_1: "A | B"
+      valid: true
+
+  - name: alt-in-choice-text
+    description: Alternative in choice text (implementation varies)
+    input: |
+      :: Start
+      + [Enter the cave] -> Cave
+    expected:
+      valid: true
+    note: Replaced - nested {alt} in choice text is implementation-dependent

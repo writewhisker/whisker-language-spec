@@ -1,0 +1,174 @@
+# WLS 1.0 Combined Validation Tests
+# Category: validation/combined
+# Tests with multiple validation issues
+
+tests:
+  # ============================================
+  # Multiple Issue Types
+  # ============================================
+
+  - name: val-combined-clean
+    description: Clean story with no validation issues
+    input: |
+      @var: score = 0
+
+      :: Start
+      Welcome to the game!
+      Your score is $score.
+      + [Play]{do score = score + 10} -> Game
+
+      :: Game
+      You're playing.
+      Score: $score
+      + [Win]{do score = score + 100} -> End
+
+      :: End
+      Game over. Final score: $score
+      + [Play again] -> RESTART
+    expected:
+      valid: true
+      passages: 3
+    validation:
+      errors: []
+      warnings: []
+      info:
+        - code: WLS-STR-006
+
+  - name: val-combined-multiple-errors
+    description: Story with multiple error types
+    input: |
+      :: Start
+      Duplicate start.
+
+      :: Start
+      Beginning with choices.
+      + [Go to missing] -> Missing
+      + [Empty target]
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      errors:
+        - code: WLS-LNK-001
+          targetPassage: Missing
+        - code: WLS-LNK-005
+        - code: WLS-STR-003
+          passageName: Start
+      info:
+        # First Start passage (no choices) is a dead end
+        - code: WLS-FLW-001
+        - code: WLS-STR-005
+
+  - name: val-combined-multiple-warnings
+    description: Story with multiple warning types
+    input: |
+      @var: unused = 0
+
+      :: Start
+      Beginning.
+      + [Loop] -> Start
+      + [end] -> end
+
+      :: Orphan
+      Unreachable.
+    expected:
+      valid: true
+      passages: 2
+    validation:
+      warnings:
+        - code: WLS-STR-002
+          passageName: Orphan
+        - code: WLS-LNK-002
+        - code: WLS-LNK-003
+          actual: end
+        - code: WLS-VAR-002
+          variableName: unused
+      info:
+        - code: WLS-FLW-001
+          passageName: Orphan
+        - code: WLS-FLW-003
+        - code: WLS-STR-005
+          passageName: Orphan
+
+  - name: val-combined-errors-and-warnings
+    description: Story with both errors and warnings
+    input: |
+      @var: unused = 0
+
+      :: Start
+      Beginning.
+      + [Go nowhere] -> Missing
+      + [Stay] -> Start
+
+      :: Orphan
+      Unreachable.
+    expected:
+      valid: true
+      passages: 2
+    validation:
+      errors:
+        - code: WLS-LNK-001
+          targetPassage: Missing
+      warnings:
+        - code: WLS-STR-002
+          passageName: Orphan
+        - code: WLS-LNK-002
+        - code: WLS-VAR-002
+          variableName: unused
+      info:
+        - code: WLS-FLW-001
+          passageName: Orphan
+        - code: WLS-FLW-003
+        - code: WLS-STR-005
+          passageName: Orphan
+
+  - name: val-combined-complex
+    description: Complex story with various issues
+    input: |
+      @var: health = 100
+      @var: unusedMana = 50
+
+      :: Start
+      Welcome!
+      + [Fight]{do damage = 10} -> Battle
+      + [Run] -> escape
+
+      :: Battle
+      You're in battle!
+      + [Attack]{if strength > 0} -> Battle {do health = health - 5}
+
+      :: Victory
+      You won!
+
+      :: Defeat
+      You lost.
+    expected:
+      valid: true
+      passages: 4
+    validation:
+      errors:
+        - code: WLS-LNK-001
+          targetPassage: escape
+        - code: WLS-VAR-001
+          variableName: damage
+        - code: WLS-VAR-001
+          variableName: strength
+      warnings:
+        - code: WLS-STR-002
+          passageName: Victory
+        - code: WLS-STR-002
+          passageName: Defeat
+        - code: WLS-VAR-002
+          variableName: unusedMana
+      info:
+        - code: WLS-FLW-001
+          passageName: Victory
+        - code: WLS-FLW-001
+          passageName: Defeat
+        - code: WLS-FLW-002
+          passageName: Battle
+        - code: WLS-FLW-003
+        - code: WLS-STR-005
+          passageName: Victory
+        - code: WLS-STR-005
+          passageName: Defeat

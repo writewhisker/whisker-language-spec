@@ -1,0 +1,663 @@
+# Chapter 10: Best Practices
+
+**Whisker Language Specification 1.0**
+
+---
+
+## 10.1 Overview
+
+This chapter provides guidelines for writing maintainable, performant, and enjoyable Whisker stories. These are recommendations, not requirements.
+
+## 10.2 Story Organization
+
+### 10.2.1 File Structure
+
+Organize large stories with clear sections:
+
+```whisker
+// ============================================
+// STORY HEADER
+// ============================================
+@title: My Epic Adventure
+@author: Jane Writer
+@version: 1.0.0
+@ifid: 550e8400-e29b-41d4-a716-446655440000
+
+@vars
+  // Player stats
+  health: 100
+  gold: 50
+
+  // Inventory flags
+  hasSword: false
+  hasKey: false
+
+  // Story progress
+  chapter: 1
+  questComplete: false
+
+// ============================================
+// CHAPTER 1: THE BEGINNING
+// ============================================
+
+:: Chapter1_Start
+@tags: chapter1, start
+...
+
+// ============================================
+// CHAPTER 2: THE JOURNEY
+// ============================================
+
+:: Chapter2_Start
+@tags: chapter2, start
+...
+```
+
+### 10.2.2 Passage Naming
+
+Use consistent, descriptive passage names:
+
+| Pattern | Example | Use Case |
+|---------|---------|----------|
+| Location | `Village`, `Forest`, `Cave` | Physical places |
+| Action | `SearchRoom`, `TalkToGuard` | Player actions |
+| Chapter prefix | `Ch1_Village`, `Ch2_Forest` | Large stories |
+| State suffix | `Door_Locked`, `Door_Open` | State-dependent |
+
+**Good names:**
+```whisker
+:: TavernMain
+:: TavernBackRoom
+:: TalkToInnkeeper
+:: BuyDrink
+```
+
+**Avoid:**
+```whisker
+:: p1          // Not descriptive
+:: passage_23  // Meaningless number
+:: asdf        // Random characters
+```
+
+### 10.2.3 Using Tags
+
+Tags help organize and query passages:
+
+```whisker
+:: Village
+@tags: location, hub, chapter1
+
+:: Combat_Goblin
+@tags: combat, enemy, chapter2
+
+:: Ending_Good
+@tags: ending, victory
+```
+
+**Tag conventions:**
+
+| Tag Type | Examples | Purpose |
+|----------|----------|---------|
+| Location type | `indoor`, `outdoor`, `dungeon` | Categorize places |
+| Chapter | `chapter1`, `chapter2` | Story sections |
+| Feature | `combat`, `puzzle`, `dialog` | Gameplay type |
+| Importance | `critical`, `optional`, `secret` | Story flow |
+
+### 10.2.4 Comments
+
+Use comments liberally:
+
+```whisker
+// This passage handles the main combat loop
+:: Combat
+@tags: combat
+
+// Initialize combat if first round
+{ whisker.visited("Combat") == 1 }
+  $enemyHealth = 50
+{/}
+
+/*
+ * Combat resolution:
+ * - Player attacks first
+ * - Enemy counterattacks if alive
+ * - Check for victory/defeat
+ */
+
+// Player's attack
+$damage = {{ whisker.random(5, 15) }}
+...
+```
+
+## 10.3 Variable Management
+
+### 10.3.1 Naming Conventions
+
+| Convention | Example | Use Case |
+|------------|---------|----------|
+| camelCase | `$playerHealth` | General variables |
+| Boolean prefix | `$hasKey`, `$isAlive` | True/false flags |
+| Category prefix | `$inv_sword`, `$stat_strength` | Grouped variables |
+| UPPER_CASE | `$MAX_HEALTH` | Constants (by convention) |
+
+### 10.3.2 Initialize Variables
+
+Always initialize variables before use:
+
+```whisker
+// GOOD: Initialize in @vars
+@vars
+  gold: 0
+  health: 100
+  hasWeapon: false
+
+// GOOD: Initialize at start
+:: Start
+$gold = 0
+$health = 100
+$hasWeapon = false
+
+// BAD: Using uninitialized variable
+:: Shop
+$gold -= 50  // Error if $gold never set!
+```
+
+### 10.3.3 Use Temporary Variables
+
+Use `_` prefix for passage-local calculations:
+
+```whisker
+:: DamageCalculation
+// Temporary variables for this calculation only
+_baseDamage = 10
+_modifier = {{ whisker.random(1, 6) }}
+_critBonus = { $criticalHit: 10 | 0 }
+_totalDamage = _baseDamage + _modifier + _critBonus
+
+// Apply to permanent state
+$enemyHealth -= _totalDamage
+
+You deal $_totalDamage damage!
+// _baseDamage, _modifier, etc. are cleared on exit
+```
+
+### 10.3.4 Group Related Variables
+
+```whisker
+@vars
+  // === PLAYER STATS ===
+  player_health: 100
+  player_maxHealth: 100
+  player_gold: 50
+  player_level: 1
+
+  // === INVENTORY ===
+  inv_sword: false
+  inv_shield: false
+  inv_potions: 0
+
+  // === QUEST FLAGS ===
+  quest_talkedToKing: false
+  quest_foundArtifact: false
+  quest_defeatedBoss: false
+
+  // === SETTINGS ===
+  setting_difficulty: 1
+  setting_showHints: true
+```
+
+### 10.3.5 Avoid Variable Explosion
+
+Consolidate when possible:
+
+```whisker
+// BAD: Many similar variables
+$hasApple: false
+$hasBanana: false
+$hasCherry: false
+$hasDurian: false
+
+// BETTER: Use a count or Lua table
+$fruitCount: 0
+
+// Or track with naming pattern
+$inv_apple: false
+$inv_banana: false
+```
+
+## 10.4 Control Flow Patterns
+
+### 10.4.1 Guard Clauses
+
+Check conditions early:
+
+```whisker
+:: Shop
+// Guard: Check if player can shop
+{ $gold <= 0 }
+  "Sorry, you have no money."
+  + [Leave] -> Exit
+{/}
+
+// Main content only if guard passes
+{ $gold > 0 }
+  "Welcome! What would you like?"
+  + [Buy sword ($50)] -> BuySword
+  + [Buy potion ($10)] -> BuyPotion
+{/}
+```
+
+### 10.4.2 Default Values
+
+Always provide defaults:
+
+```whisker
+// GOOD: Default case covered
+{ $faction == "rebels" }
+  The rebels welcome you.
+{elif $faction == "empire" }
+  The imperials salute you.
+{else}
+  No one recognizes you.
+{/}
+
+// BAD: Missing default
+{ $faction == "rebels" }
+  The rebels welcome you.
+{elif $faction == "empire" }
+  The imperials salute you.
+{/}
+// What if $faction is neither?
+```
+
+### 10.4.3 Avoid Deep Nesting
+
+Refactor deeply nested conditionals:
+
+```whisker
+// BAD: Too deep
+{ $hasKey }
+  { $doorUnlocked }
+    { $guardAsleep }
+      { $hasDisguise }
+        You sneak through!
+      {/}
+    {/}
+  {/}
+{/}
+
+// BETTER: Combine conditions
+{ $hasKey and $doorUnlocked and $guardAsleep and $hasDisguise }
+  You sneak through!
+{/}
+
+// OR: Use early returns (multiple passages)
+{ not $hasKey }
+  + [Need a key] -> FindKey
+{/}
+{ not $doorUnlocked }
+  + [Door is locked] -> UnlockDoor
+{/}
+// ... etc.
+```
+
+### 10.4.4 Meaningful Alternatives
+
+Use alternatives purposefully:
+
+```whisker
+// GOOD: Adds variety without confusion
+The tavern is {~| busy | quiet | moderately full } tonight.
+
+// BAD: Confusing when alternatives matter
+The guard says the password is {~| ALPHA | BETA | GAMMA }.
+// Player can't know which is correct!
+
+// BETTER: Use sequence for reveals
+The guard whispers: {| "Listen carefully..." | "The password is ALPHA." | "Remember: ALPHA." }
+```
+
+## 10.5 Choice Design
+
+### 10.5.1 Clear Choice Text
+
+Make choices clear and distinct:
+
+```whisker
+// GOOD: Clear actions
++ [Attack the dragon] -> Attack
++ [Try to negotiate] -> Negotiate
++ [Flee the cave] -> Flee
+
+// BAD: Vague or similar
++ [Do something] -> Action1
++ [Take action] -> Action2
++ [Act now] -> Action3
+```
+
+### 10.5.2 Show Costs
+
+Display costs in choice text:
+
+```whisker
+// GOOD: Cost is visible
++ { $gold >= 50 } [Buy sword ($50)] { $gold -= 50 } -> BuySword
++ { $gold >= 100 } [Buy armor ($100)] { $gold -= 100 } -> BuyArmor
+
+// BAD: Hidden cost surprises player
++ [Buy sword] { $gold -= 50 } -> BuySword
+```
+
+### 10.5.3 Ensure Available Choices
+
+Always provide at least one available choice:
+
+```whisker
+:: Shop
+// Conditional choices might all be hidden
++ { $gold >= 100 } [Buy expensive item] -> Buy
++ { $gold >= 50 } [Buy cheap item] -> Buy
+
+// ALWAYS include a fallback
+* [Look around] -> Browse
++ [Leave] -> Exit
+```
+
+### 10.5.4 Once-Only vs Sticky
+
+Choose the right type:
+
+```whisker
+:: Investigation
+// Once-only: Clues discovered once
++ [Search under the bed] -> SearchBed
++ [Check the drawer] -> SearchDrawer
++ [Examine the painting] -> SearchPainting
+
+// Sticky: Can repeat
+* [Review your notes] -> ReviewNotes
+* [Think about the case] -> Think
+
+// Exit (once you're done)
++ [Leave the room] -> Hallway
+```
+
+## 10.6 State Management
+
+### 10.6.1 State Machines
+
+Use explicit states for complex logic:
+
+```whisker
+@vars
+  doorState: "locked"  // locked, unlocked, open
+
+:: Door
+{ $doorState == "locked" }
+  The door is locked tight.
+  + { $hasKey } [Unlock the door] { $doorState = "unlocked" } -> Door
+{elif $doorState == "unlocked" }
+  The door is unlocked but closed.
+  + [Open the door] { $doorState = "open" } -> Door
+{elif $doorState == "open" }
+  The door stands open.
+  + [Go through] -> NextRoom
+{/}
+
+* [Examine the door] -> ExamineDoor
+```
+
+### 10.6.2 Quest Tracking
+
+Track quests with clear flags:
+
+```whisker
+@vars
+  // Quest: Find the Lost Artifact
+  quest_artifact_started: false
+  quest_artifact_talkedToSage: false
+  quest_artifact_foundMap: false
+  quest_artifact_retrieved: false
+  quest_artifact_complete: false
+
+:: Sage
+{ not $quest_artifact_started }
+  "Adventurer! I need your help finding a lost artifact."
+  + [Accept quest] { $quest_artifact_started = true; $quest_artifact_talkedToSage = true } -> QuestAccepted
+{elif $quest_artifact_retrieved and not $quest_artifact_complete }
+  "You found it! Here is your reward."
+  { $quest_artifact_complete = true; $gold += 100 }
+{else}
+  "Good luck on your quest!"
+{/}
+```
+
+### 10.6.3 Inventory Patterns
+
+```whisker
+// Simple: Boolean flags
+$inv_sword = true
+$inv_shield = false
+
+// With quantities
+$inv_potions = 3
+$inv_arrows = 20
+
+// Usage
++ { $inv_potions > 0 } [Use potion] { $inv_potions -= 1; $health += 25 } -> Healed
+
+// Check for any weapon
+{ $inv_sword or $inv_axe or $inv_bow }
+  You have a weapon ready.
+{/}
+```
+
+## 10.7 Performance Tips
+
+### 10.7.1 Minimize Lua in Hot Paths
+
+```whisker
+// AVOID: Complex Lua on every visit
+:: Corridor
+{{
+  -- This runs every time
+  for i = 1, 100 do
+    -- unnecessary work
+  end
+}}
+
+// BETTER: Only compute when needed
+:: Corridor
+{ whisker.visited("Corridor") == 1 }
+  {{ -- One-time initialization }}
+{/}
+```
+
+### 10.7.2 Use Simple Conditions
+
+```whisker
+// GOOD: Simple boolean check
+{ $hasKey }
+
+// LESS EFFICIENT: Complex computation
+{ whisker.state.get("inventory").items.keys > 0 }
+
+// BETTER: Cache complex results
+$hasKey = {{ checkInventory("key") }}
+{ $hasKey }
+```
+
+### 10.7.3 Avoid Redundant Checks
+
+```whisker
+// BAD: Repeated condition
+{ $gold >= 100 }
+  You can afford the sword.
+{/}
+{ $gold >= 100 }
+  You can afford the armor.
+{/}
+
+// BETTER: Single check
+{ $gold >= 100 }
+  You can afford the sword.
+  You can afford the armor.
+{/}
+```
+
+## 10.8 Testing Strategies
+
+### 10.8.1 Test All Paths
+
+Ensure every passage is reachable:
+
+```
+Checklist:
+[ ] All passages visited at least once
+[ ] All choices tested
+[ ] All conditions evaluated true AND false
+[ ] All endings reached
+[ ] All variable states tested
+```
+
+### 10.8.2 Edge Cases
+
+Test boundary conditions:
+
+```whisker
+// Test when gold is exactly at threshold
+$gold = 50
+// Can player buy 50-gold item?
+
+// Test empty states
+$inventory = 0
+// Does "no items" display correctly?
+
+// Test maximum values
+$health = 999999
+// Does display handle large numbers?
+```
+
+### 10.8.3 Debug Output
+
+Use `whisker.print()` during development:
+
+```whisker
+:: Combat
+@onEnter: whisker.print("Entering combat, health:", whisker.state.get("health"))
+
+{{
+  whisker.print("Enemy health:", whisker.state.get("enemyHealth"))
+  whisker.print("Player damage roll:", damage)
+}}
+```
+
+### 10.8.4 Validation Checklist
+
+Before release:
+
+| Check | Status |
+|-------|--------|
+| All passages have valid targets | [ ] |
+| No undefined variables used | [ ] |
+| All conditions have else cases | [ ] |
+| IFID is unique | [ ] |
+| Start passage exists | [ ] |
+| At least one ending | [ ] |
+
+## 10.9 Common Pitfalls
+
+### 10.9.1 Undefined Variables
+
+```whisker
+// PITFALL: Variable used before definition
+:: Start
+You have $gold gold.  // Error: $gold undefined!
+
+// FIX: Initialize first
+$gold = 100
+You have $gold gold.
+```
+
+### 10.9.2 Missing Choice Targets
+
+```whisker
+// PITFALL: Target doesn't exist
++ [Go to castle] -> Castle  // Error if no :: Castle passage!
+
+// FIX: Ensure passage exists
+:: Castle
+The castle looms above...
+```
+
+### 10.9.3 Infinite Loops
+
+```whisker
+// PITFALL: No way out
+:: Room
+You're in a room.
+* [Look around] -> Room  // Only choice loops back!
+
+// FIX: Provide exit
+:: Room
+You're in a room.
+* [Look around] -> Room
++ [Leave] -> Exit
+```
+
+### 10.9.4 Unreachable Passages
+
+```whisker
+// PITFALL: Passage exists but nothing links to it
+:: SecretRoom
+Hidden treasure here!
+// But no choice has -> SecretRoom!
+
+// FIX: Ensure at least one path leads here
+:: MainHall
++ { $foundSecretSwitch } [Enter secret room] -> SecretRoom
+```
+
+### 10.9.5 State Desync
+
+```whisker
+// PITFALL: Multiple passages modify same state
+:: Shop
+$gold -= 50
+
+:: OtherShop
+$gold -= 50
+// Player can exploit by visiting both!
+
+// FIX: Use flags to prevent double-spending
++ { not $boughtSword } [Buy sword] { $gold -= 50; $boughtSword = true } -> GotSword
+```
+
+### 10.9.6 Shadowing Variables
+
+```whisker
+// PITFALL: Temp shadows story var
+$gold = 100
+_gold = 50  // Error: shadows $gold!
+
+// FIX: Use distinct names
+$gold = 100
+_tempGold = 50
+```
+
+## 10.10 Style Guide Summary
+
+| Category | Recommendation |
+|----------|----------------|
+| **Naming** | camelCase for variables, descriptive passage names |
+| **Structure** | Section comments, consistent tagging |
+| **Variables** | Initialize early, use temps for calculations |
+| **Conditions** | Guard clauses, always provide defaults |
+| **Choices** | Clear text, show costs, ensure fallbacks |
+| **Performance** | Simple conditions, cache complex results |
+| **Testing** | Test all paths, check edge cases |
+
+---
+
+**Previous Chapter:** [Examples](09-EXAMPLES.md)
+**Next Chapter:** [Appendices](APPENDICES.md)

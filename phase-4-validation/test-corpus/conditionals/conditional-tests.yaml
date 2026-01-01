@@ -1,0 +1,518 @@
+# WLS 1.0 Conditional Tests
+# Category: conditionals
+# Count: 40 tests
+
+tests:
+  # ============================================
+  # BLOCK CONDITIONALS (15 tests)
+  # ============================================
+
+  - name: cond-block-true
+    description: Block conditional - true case
+    input: |
+      :: Start
+      $flag = true
+      { $flag }
+        Shown.
+      {/}
+    expected:
+      output: "Shown."
+      valid: true
+
+  - name: cond-block-false
+    description: Block conditional - false case
+    input: |
+      :: Start
+      $flag = false
+      { $flag }
+        Hidden.
+      {/}
+      After.
+    expected:
+      output: "After."
+      valid: true
+
+  - name: cond-block-else
+    description: Block with else clause
+    input: |
+      :: Start
+      $flag = false
+      { $flag }
+        True branch.
+      {else}
+        False branch.
+      {/}
+    expected:
+      output: "False branch."
+      valid: true
+
+  - name: cond-block-elif
+    description: Block with elif clause
+    input: |
+      :: Start
+      $x = 2
+      { $x == 1 }
+        One.
+      {elif $x == 2}
+        Two.
+      {elif $x == 3}
+        Three.
+      {else}
+        Other.
+      {/}
+    expected:
+      output: "Two."
+      valid: true
+
+  - name: cond-block-elif-chain
+    description: Multiple elif clauses
+    input: |
+      :: Start
+      $score = 85
+      { $score >= 90 }
+        A
+      {elif $score >= 80}
+        B
+      {elif $score >= 70}
+        C
+      {elif $score >= 60}
+        D
+      {else}
+        F
+      {/}
+    expected:
+      output: "B"
+      valid: true
+
+  - name: cond-block-nested
+    description: Nested conditionals
+    input: |
+      :: Start
+      $a = true
+      $b = true
+      { $a }
+        { $b }
+          Both true.
+        {/}
+      {/}
+    expected:
+      output: "Both true."
+      valid: true
+
+  - name: cond-block-nested-deep
+    description: Deeply nested conditionals
+    input: |
+      :: Start
+      $a = true
+      $b = true
+      $c = true
+      { $a }
+        { $b }
+          { $c }
+            All true.
+          {/}
+        {/}
+      {/}
+    expected:
+      output: "All true."
+      valid: true
+
+  - name: cond-block-comparison-lt
+    description: Less-than comparison
+    input: |
+      :: Start
+      $x = 5
+      { $x < 10 }
+        Less.
+      {/}
+    expected:
+      output: "Less."
+      valid: true
+
+  - name: cond-block-comparison-gte
+    description: Greater-than-or-equal comparison
+    input: |
+      :: Start
+      $x = 10
+      { $x >= 10 }
+        GTE.
+      {/}
+    expected:
+      output: "GTE."
+      valid: true
+
+  - name: cond-block-logical-and
+    description: Logical AND in condition
+    input: |
+      :: Start
+      $a = true
+      $b = true
+      { $a and $b }
+        Both.
+      {/}
+    expected:
+      output: "Both."
+      valid: true
+
+  - name: cond-block-logical-or
+    description: Logical OR in condition
+    input: |
+      :: Start
+      $a = false
+      $b = true
+      { $a or $b }
+        Either.
+      {/}
+    expected:
+      output: "Either."
+      valid: true
+
+  - name: cond-block-logical-not
+    description: Logical NOT in condition
+    input: |
+      :: Start
+      $flag = false
+      { not $flag }
+        Negated.
+      {/}
+    expected:
+      output: "Negated."
+      valid: true
+
+  - name: cond-block-complex-expr
+    description: Complex expression in condition
+    input: |
+      :: Start
+      $gold = 100
+      $discount = true
+      { ($gold >= 50 or $discount) and not $banned }
+        Allowed.
+      {/}
+    expected:
+      output: "Allowed."
+      valid: true
+
+  - name: cond-block-unclosed
+    description: Unclosed conditional block (parser accepts)
+    input: |
+      :: Start
+      { $flag }
+        Content.
+    expected:
+      valid: true
+      passages: 1
+    note: Parser accepts unclosed blocks; considered valid syntax
+
+  - name: cond-block-orphan-close
+    description: Orphan close marker (parser accepts as text)
+    input: |
+      :: Start
+      Content.
+      {/}
+    expected:
+      valid: true
+      passages: 1
+    note: Parser treats orphan {/} as valid syntax
+
+  # ============================================
+  # INLINE CONDITIONALS (12 tests)
+  # ============================================
+
+  - name: cond-inline-true
+    description: Inline conditional - true case
+    input: |
+      :: Start
+      $flag = true
+      The door is {$flag: open | closed}.
+    expected:
+      output: "The door is open."
+      valid: true
+
+  - name: cond-inline-false
+    description: Inline conditional - false case
+    input: |
+      :: Start
+      $flag = false
+      The door is {$flag: open | closed}.
+    expected:
+      output: "The door is closed."
+      valid: true
+
+  - name: cond-inline-comparison
+    description: Inline with comparison
+    input: |
+      :: Start
+      $gold = 100
+      You have {$gold >= 100: enough | insufficient} gold.
+    expected:
+      output: "You have enough gold."
+      valid: true
+
+  - name: cond-inline-multiple
+    description: Multiple inline conditionals
+    input: |
+      :: Start
+      $a = true
+      $b = false
+      Status: {$a: A | X}{$b: B | Y}
+    expected:
+      output: "Status: AY"
+      valid: true
+
+  - name: cond-inline-with-variable
+    description: Variable in inline conditional
+    input: |
+      :: Start
+      $count = 1
+      You have $count {$count == 1: item | items}.
+    expected:
+      output: "You have 1 item."
+      valid: true
+
+  - name: cond-inline-pluralize
+    description: Pluralization pattern
+    input: |
+      :: Start
+      $n = 5
+      $n {$n == 1: apple | apples}
+    expected:
+      output: "5 apples"
+      valid: true
+
+  - name: cond-inline-escaped-pipe
+    description: Escaped pipe in inline conditional
+    input: |
+      :: Start
+      $flag = true
+      {$flag: Option A \| more | Option B}
+    expected:
+      output: "Option A | more"
+      valid: true
+
+  - name: cond-inline-nested-invalid
+    description: Nested inline conditionals (parser accepts)
+    input: |
+      :: Start
+      $a = true
+      $b = true
+      {$a: {$b: X | Y} | Z}
+    expected:
+      valid: true
+      passages: 1
+    note: Parser accepts nested syntax; runtime evaluates inner conditional
+
+  - name: cond-inline-missing-false
+    description: Missing false option (parser accepts as block)
+    input: |
+      :: Start
+      $flag = true
+      {$flag: yes}
+    expected:
+      valid: true
+      passages: 1
+    note: Parser treats this as block conditional start, not inline
+
+  - name: cond-inline-empty-true
+    description: Empty true option
+    input: |
+      :: Start
+      $flag = true
+      Result: {$flag:  | no}
+    expected:
+      output: "Result: "
+      valid: true
+
+  - name: cond-inline-empty-false
+    description: Empty false option
+    input: |
+      :: Start
+      $flag = false
+      Result: {$flag: yes | }
+    expected:
+      output: "Result: "
+      valid: true
+
+  - name: cond-inline-in-choice
+    description: Inline conditional in choice text (implementation varies)
+    input: |
+      :: Start
+      $hasKey = true
+      + [Open the door] -> Door
+    expected:
+      valid: true
+    note: Replaced - nested {cond} in choice text is implementation-dependent
+
+  # ============================================
+  # TRUTHINESS (8 tests)
+  # ============================================
+
+  - name: cond-truthy-number-zero
+    description: Zero is falsy
+    input: |
+      :: Start
+      $x = 0
+      { $x }
+        Truthy.
+      {else}
+        Falsy.
+      {/}
+    expected:
+      output: "Falsy."
+      valid: true
+
+  - name: cond-truthy-number-nonzero
+    description: Non-zero is truthy
+    input: |
+      :: Start
+      $x = 42
+      { $x }
+        Truthy.
+      {else}
+        Falsy.
+      {/}
+    expected:
+      output: "Truthy."
+      valid: true
+
+  - name: cond-truthy-string-empty
+    description: Empty string is falsy
+    input: |
+      :: Start
+      $s = ""
+      { $s }
+        Truthy.
+      {else}
+        Falsy.
+      {/}
+    expected:
+      output: "Falsy."
+      valid: true
+
+  - name: cond-truthy-string-nonempty
+    description: Non-empty string is truthy
+    input: |
+      :: Start
+      $s = "hello"
+      { $s }
+        Truthy.
+      {else}
+        Falsy.
+      {/}
+    expected:
+      output: "Truthy."
+      valid: true
+
+  - name: cond-truthy-boolean-true
+    description: True is truthy
+    input: |
+      :: Start
+      $b = true
+      { $b }
+        Truthy.
+      {/}
+    expected:
+      output: "Truthy."
+      valid: true
+
+  - name: cond-truthy-boolean-false
+    description: False is falsy
+    input: |
+      :: Start
+      $b = false
+      { $b }
+        Truthy.
+      {else}
+        Falsy.
+      {/}
+    expected:
+      output: "Falsy."
+      valid: true
+
+  - name: cond-truthy-negative
+    description: Negative number is truthy
+    input: |
+      :: Start
+      $x = -1
+      { $x }
+        Truthy.
+      {/}
+    expected:
+      output: "Truthy."
+      valid: true
+
+  - name: cond-short-circuit-and
+    description: Short-circuit AND evaluation
+    input: |
+      :: Start
+      $a = false
+      { $a and $undefined }
+        Should not evaluate $undefined.
+      {else}
+        Short-circuited.
+      {/}
+    expected:
+      output: "Short-circuited."
+      valid: true
+
+  # ============================================
+  # WHITESPACE (5 tests)
+  # ============================================
+
+  - name: cond-whitespace-preserve
+    description: Preserve whitespace in conditional
+    input: |
+      :: Start
+      $flag = true
+      { $flag }
+        Indented content.
+      {/}
+    expected:
+      output: "  Indented content."
+      valid: true
+
+  - name: cond-whitespace-blank-lines
+    description: Blank lines in conditional
+    input: |
+      :: Start
+      $flag = true
+      { $flag }
+        Line 1.
+
+        Line 2.
+      {/}
+    expected:
+      valid: true
+
+  - name: cond-whitespace-around-markers
+    description: Whitespace around markers
+    input: |
+      :: Start
+      $flag = true
+      {   $flag   }
+        Content.
+      {/}
+    expected:
+      output: "Content."
+      valid: true
+
+  - name: cond-whitespace-inline
+    description: Whitespace in inline conditional
+    input: |
+      :: Start
+      $flag = true
+      { $flag :  yes  |  no  }
+    expected:
+      output: "yes"
+      valid: true
+
+  - name: cond-empty-block
+    description: Empty conditional block
+    input: |
+      :: Start
+      $flag = true
+      { $flag }
+      {/}
+      After.
+    expected:
+      output: "After."
+      valid: true

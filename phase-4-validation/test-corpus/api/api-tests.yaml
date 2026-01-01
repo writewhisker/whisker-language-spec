@@ -1,0 +1,307 @@
+# WLS 1.0 Lua API Tests
+# Category: api
+# Count: 25 tests
+# Note: These tests use {{ }} Lua expression syntax (runtime tests)
+# skip_platforms: ["editor"] - TypeScript parser doesn't support {{ }} syntax
+
+tests:
+  # ============================================
+  # whisker.state (8 tests)
+  # ============================================
+
+  - name: api-state-get
+    description: whisker.state.get()
+    input: |
+      :: Start
+      $gold = 100
+      Value: {{ whisker.state.get("gold") }}
+    expected:
+      output: "Value: 100"
+      valid: true
+
+  - name: api-state-set
+    description: whisker.state.set()
+    input: |
+      :: Start
+      {{ whisker.state.set("gold", 200) }}
+      Value: $gold
+    expected:
+      output: "Value: 200"
+      variables:
+        gold: 200
+      valid: true
+
+  - name: api-state-has-true
+    description: whisker.state.has() - exists
+    input: |
+      :: Start
+      $gold = 100
+      Has gold: {{ whisker.state.has("gold") }}
+    expected:
+      output: "Has gold: true"
+      valid: true
+
+  - name: api-state-has-false
+    description: whisker.state.has() - not exists
+    input: |
+      :: Start
+      Has gold: {{ whisker.state.has("gold") }}
+    expected:
+      output: "Has gold: false"
+      valid: true
+
+  - name: api-state-delete
+    description: whisker.state.delete()
+    input: |
+      :: Start
+      $gold = 100
+      {{ whisker.state.delete("gold") }}
+      Has: {{ whisker.state.has("gold") }}
+    expected:
+      output: "Has: false"
+      valid: true
+
+  - name: api-state-all
+    description: whisker.state.all()
+    input: |
+      :: Start
+      $a = 1
+      $b = 2
+      {{
+        local state = whisker.state.all()
+        whisker.state.set("count", 0)
+        for k, v in pairs(state) do
+          whisker.state.set("count", whisker.state.get("count") + 1)
+        end
+      }}
+      Variables: $count
+    expected:
+      valid: true
+
+  - name: api-state-reset
+    description: whisker.state.reset()
+    input: |
+      :: Start
+      $gold = 100
+      {{ whisker.state.reset() }}
+      Has: {{ whisker.state.has("gold") }}
+    expected:
+      output: "Has: false"
+      valid: true
+
+  - name: api-state-get-nil
+    description: whisker.state.get() returns nil for undefined
+    input: |
+      :: Start
+      Value: {{ whisker.state.get("undefined") or "nil" }}
+    expected:
+      output: "Value: nil"
+      valid: true
+
+  # ============================================
+  # whisker.passage (5 tests)
+  # ============================================
+
+  - name: api-passage-current
+    description: whisker.passage.current()
+    input: |
+      :: Start
+      Passage: {{ whisker.passage.current().id }}
+    expected:
+      output: "Passage: Start"
+      valid: true
+
+  - name: api-passage-get
+    description: whisker.passage.get()
+    input: |
+      :: Start
+      {{
+        local p = whisker.passage.get("Other")
+        if p then
+          whisker.state.set("found", true)
+        end
+      }}
+
+      :: Other
+      Other content.
+    expected:
+      variables:
+        found: true
+      valid: true
+
+  - name: api-passage-exists
+    description: whisker.passage.exists()
+    input: |
+      :: Start
+      Exists: {{ whisker.passage.exists("Start") }}
+      Missing: {{ whisker.passage.exists("NotHere") }}
+    expected:
+      output: "Exists: true\nMissing: false"
+      valid: true
+
+  - name: api-passage-go
+    description: whisker.passage.go()
+    input: |
+      :: Start
+      {{ whisker.passage.go("Other") }}
+
+      :: Other
+      Arrived via go().
+    expected:
+      valid: true
+
+  - name: api-passage-tags
+    description: whisker.passage.tags()
+    input: |
+      :: Start
+      @tags: chapter1, important
+
+      :: Other
+      @tags: chapter1
+
+      :: Third
+      @tags: chapter2
+    expected:
+      # whisker.passage.tags("chapter1") returns 2 passages
+      valid: true
+
+  # ============================================
+  # whisker.history (4 tests)
+  # ============================================
+
+  - name: api-history-back
+    description: whisker.history.back()
+    input: |
+      :: Start
+      + [Go] -> Next
+
+      :: Next
+      {{ whisker.history.back() }}
+    expected:
+      valid: true
+
+  - name: api-history-canBack
+    description: whisker.history.canBack()
+    input: |
+      :: Start
+      Can go back: {{ whisker.history.canBack() }}
+    expected:
+      output: "Can go back: false"
+      valid: true
+
+  - name: api-history-count
+    description: whisker.history.count()
+    input: |
+      :: Start
+      + [Go] -> Next
+
+      :: Next
+      History: {{ whisker.history.count() }}
+    expected:
+      output_next: "History: 1"
+      valid: true
+
+  - name: api-history-contains
+    description: whisker.history.contains()
+    input: |
+      :: Start
+      + [Go] -> Next
+
+      :: Next
+      Was at Start: {{ whisker.history.contains("Start") }}
+    expected:
+      output_next: "Was at Start: true"
+      valid: true
+
+  # ============================================
+  # Top-level functions (5 tests)
+  # ============================================
+
+  - name: api-visited-current
+    description: whisker.visited() current passage
+    input: |
+      :: Start
+      Visits: {{ whisker.visited() }}
+      + [Again] -> Start
+    expected:
+      output_visit_1: "Visits: 1"
+      output_visit_2: "Visits: 2"
+      valid: true
+
+  - name: api-visited-other
+    description: whisker.visited(passage)
+    input: |
+      :: Start
+      + [Go] -> Other
+
+      :: Other
+      Start visits: {{ whisker.visited("Start") }}
+    expected:
+      output_other: "Start visits: 1"
+      valid: true
+
+  - name: api-random
+    description: whisker.random(min, max)
+    input: |
+      :: Start
+      Roll: {{ whisker.random(1, 6) }}
+    expected:
+      # Output varies between 1-6
+      valid: true
+
+  - name: api-pick
+    description: whisker.pick(...)
+    input: |
+      :: Start
+      Color: {{ whisker.pick("red", "green", "blue") }}
+    expected:
+      # Output is one of the options
+      valid: true
+
+  - name: api-print
+    description: whisker.print()
+    input: |
+      :: Start
+      {{ whisker.print("Debug message") }}
+      Content.
+    expected:
+      output: "Content."
+      valid: true
+
+  # ============================================
+  # Embedded Lua (3 tests)
+  # ============================================
+
+  - name: api-lua-inline
+    description: Inline Lua expression
+    input: |
+      :: Start
+      $x = {{ 5 + 3 }}
+    expected:
+      variables:
+        x: 8
+      valid: true
+
+  - name: api-lua-block
+    description: Block Lua script
+    input: |
+      :: Start
+      {{
+        local a = 10
+        local b = 20
+        whisker.state.set("sum", a + b)
+      }}
+      Sum: $sum
+    expected:
+      output: "Sum: 30"
+      valid: true
+
+  - name: api-lua-stdlib
+    description: Lua standard library available
+    input: |
+      :: Start
+      Upper: {{ string.upper("hello") }}
+      Floor: {{ math.floor(3.7) }}
+    expected:
+      output: "Upper: HELLO\nFloor: 3"
+      valid: true

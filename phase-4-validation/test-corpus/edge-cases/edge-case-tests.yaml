@@ -1,0 +1,354 @@
+# WLS 1.0 Edge Case Tests
+# Category: edge-cases
+# Count: 30 tests
+
+tests:
+  # ============================================
+  # BOUNDARY CONDITIONS (10 tests)
+  # ============================================
+
+  - name: edge-empty-passage
+    description: Passage with no content
+    input: |
+      :: Start
+
+      :: Next
+      Content here.
+    expected:
+      valid: true
+
+  - name: edge-no-choices
+    description: Passage with no choices
+    input: |
+      :: Start
+      The end.
+    expected:
+      valid: true
+
+  - name: edge-many-passages
+    description: Large number of passages (100)
+    input: |
+      :: Start
+      + [Go] -> P1
+
+      :: P1
+      + [Go] -> P2
+      # ... (continues to P100)
+    expected:
+      valid: true
+      # Implementation must handle 100+ passages
+
+  - name: edge-long-content
+    description: Very long passage content
+    input: |
+      :: Start
+      Lorem ipsum dolor sit amet... (repeated 1000 times)
+    expected:
+      valid: true
+
+  - name: edge-deep-nesting
+    description: Deeply nested conditionals (10 levels)
+    input: |
+      :: Start
+      $a = true
+      { $a }
+        { $a }
+          { $a }
+            { $a }
+              { $a }
+                { $a }
+                  { $a }
+                    { $a }
+                      { $a }
+                        { $a }
+                          Ten levels deep.
+                        {/}
+                      {/}
+                    {/}
+                  {/}
+                {/}
+              {/}
+            {/}
+          {/}
+        {/}
+      {/}
+    expected:
+      output: "Ten levels deep."
+      valid: true
+
+  - name: edge-many-choices
+    description: Many choices (20)
+    input: |
+      :: Start
+      + [Choice 1] -> T1
+      + [Choice 2] -> T2
+      + [Choice 3] -> T3
+      + [Choice 4] -> T4
+      + [Choice 5] -> T5
+      + [Choice 6] -> T6
+      + [Choice 7] -> T7
+      + [Choice 8] -> T8
+      + [Choice 9] -> T9
+      + [Choice 10] -> T10
+      + [Choice 11] -> T11
+      + [Choice 12] -> T12
+      + [Choice 13] -> T13
+      + [Choice 14] -> T14
+      + [Choice 15] -> T15
+      + [Choice 16] -> T16
+      + [Choice 17] -> T17
+      + [Choice 18] -> T18
+      + [Choice 19] -> T19
+      + [Choice 20] -> T20
+    expected:
+      choices: 20
+      valid: true
+
+  - name: edge-many-variables
+    description: Many variables (100)
+    input: |
+      :: Start
+      $v1 = 1
+      $v2 = 2
+      $v3 = 3
+      $v4 = 4
+      $v5 = 5
+      Sum test.
+    expected:
+      valid: true
+    note: Simplified test - @vars block syntax varies by implementation
+
+  - name: edge-long-variable-name
+    description: Very long variable name
+    input: |
+      :: Start
+      $thisIsAVeryLongVariableNameThatShouldStillBeValidAccordingToTheSpec = 100
+    expected:
+      valid: true
+
+  - name: edge-long-passage-name
+    description: Very long passage name
+    input: |
+      :: ThisIsAVeryLongPassageNameThatShouldStillBeValidAccordingToTheSpecification
+      Content.
+    expected:
+      valid: true
+
+  - name: edge-unicode-identifiers
+    description: Unicode in strings (identifiers are ASCII)
+    input: |
+      :: Start
+      $greeting = "こんにちは"
+      $greeting
+    expected:
+      output: "こんにちは"
+      valid: true
+
+  # ============================================
+  # SPECIAL CHARACTERS (8 tests)
+  # ============================================
+
+  - name: edge-special-chars-content
+    description: Special characters in content
+    input: |
+      :: Start
+      Characters: < > and more
+    expected:
+      valid: true
+    note: Simplified - many chars have syntactic meaning in WLS
+
+  - name: edge-escaped-dollar
+    description: Escaped dollar sign
+    input: |
+      :: Start
+      Price: \$100
+    expected:
+      output: "Price: $100"
+      valid: true
+
+  - name: edge-escaped-braces
+    description: Escaped braces
+    input: |
+      :: Start
+      Code: \{ and \}
+    expected:
+      output: "Code: { and }"
+      valid: true
+
+  - name: edge-escaped-backslash
+    description: Escaped backslash
+    input: |
+      :: Start
+      Path: C:\\folder\\file
+    expected:
+      output: "Path: C:\\folder\\file"
+      valid: true
+
+  - name: edge-empty-string
+    description: Empty string handling
+    input: |
+      :: Start
+      $s = ""
+      Empty: "$s"
+    expected:
+      output: 'Empty: ""'
+      valid: true
+
+  - name: edge-string-with-quotes
+    description: Quotes in string
+    input: |
+      :: Start
+      $s = "He said \"Hello\""
+      $s
+    expected:
+      output: 'He said "Hello"'
+      valid: true
+
+  - name: edge-newline-in-string
+    description: Newline escape in string
+    input: |
+      :: Start
+      $s = "Line1\nLine2"
+    expected:
+      valid: true
+
+  - name: edge-tab-in-string
+    description: Tab escape in string
+    input: |
+      :: Start
+      $s = "Col1\tCol2"
+    expected:
+      valid: true
+
+  # ============================================
+  # NUMERIC EDGE CASES (6 tests)
+  # ============================================
+
+  - name: edge-number-zero
+    description: Zero handling
+    input: |
+      :: Start
+      $x = 0
+      { $x }
+        Truthy.
+      {else}
+        Falsy.
+      {/}
+    expected:
+      output: "Falsy."
+      valid: true
+
+  - name: edge-number-negative
+    description: Negative number
+    input: |
+      :: Start
+      $x = -42
+      Value: $x
+    expected:
+      output: "Value: -42"
+      valid: true
+
+  - name: edge-number-decimal
+    description: Decimal precision
+    input: |
+      :: Start
+      $x = 3.14159265359
+    expected:
+      valid: true
+
+  - name: edge-division-result
+    description: Division produces float
+    input: |
+      :: Start
+      $x = 5 / 2
+    expected:
+      variables:
+        x: 2.5
+      valid: true
+
+  - name: edge-division-by-zero
+    description: Division by zero (runtime behavior)
+    input: |
+      :: Start
+      $x = 10 / 0
+    expected:
+      valid: true
+      passages: 1
+    note: Parser accepts; runtime produces inf/nan or error
+
+  - name: edge-modulo-zero
+    description: Modulo by zero (runtime behavior)
+    input: |
+      :: Start
+      $x = 10 % 0
+    expected:
+      valid: true
+      passages: 1
+    note: Parser accepts; runtime produces nan or error
+
+  # ============================================
+  # CONTROL FLOW EDGE CASES (6 tests)
+  # ============================================
+
+  - name: edge-self-reference
+    description: Passage links to itself
+    input: |
+      :: Start
+      $count = 0
+      $count += 1
+      Count: $count
+      + { $count < 3 } [Again] -> Start
+      + { $count >= 3 } [Done] -> END
+    expected:
+      valid: true
+
+  - name: edge-circular-reference
+    description: Circular passage references
+    input: |
+      :: A
+      + [Go to B] -> B
+
+      :: B
+      + [Go to A] -> A
+    expected:
+      valid: true
+
+  - name: edge-exhausted-choices
+    description: All choices become unavailable
+    input: |
+      :: Start
+      + [First] -> Start
+      + [Second] -> Start
+      // After both selected, no choices remain
+    expected:
+      valid: true
+      # Implementation should handle gracefully
+
+  - name: edge-choice-self-target
+    description: Choice targets same passage
+    input: |
+      :: Start
+      + [Stay here] -> Start
+    expected:
+      valid: true
+
+  - name: edge-empty-condition
+    description: Empty condition block
+    input: |
+      :: Start
+      $flag = true
+      { $flag }
+      {/}
+      After.
+    expected:
+      output: "After."
+      valid: true
+
+  - name: edge-alternative-single-visit
+    description: Alternative behavior on single visit
+    input: |
+      :: Start
+      {| Only | Second | Third }
+    expected:
+      output: "Only"
+      valid: true

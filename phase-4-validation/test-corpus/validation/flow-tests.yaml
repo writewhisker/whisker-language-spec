@@ -1,0 +1,100 @@
+# WLS 1.0 Flow Validation Tests
+# Category: validation/flow
+# Tests for: WLS-FLW-001 through WLS-FLW-006
+
+tests:
+  # ============================================
+  # WLS-FLW-001: Dead End (No Choices)
+  # ============================================
+
+  - name: val-flw-001-dead-end
+    description: Passage with no choices
+    input: |
+      :: Start
+      Beginning.
+      + [Continue] -> End
+
+      :: End
+      This is the end.
+    expected:
+      valid: true
+      passages: 2
+    validation:
+      info:
+        - code: WLS-FLW-001
+          passageName: End
+
+  - name: val-flw-001-multiple-dead-ends
+    description: Multiple passages with no choices
+    input: |
+      :: Start
+      Choose your ending.
+      + [Good ending] -> GoodEnd
+      + [Bad ending] -> BadEnd
+
+      :: GoodEnd
+      You won!
+
+      :: BadEnd
+      You lost.
+    expected:
+      valid: true
+      passages: 3
+    validation:
+      info:
+        - code: WLS-FLW-001
+          passageName: GoodEnd
+        - code: WLS-FLW-001
+          passageName: BadEnd
+
+  - name: val-flw-001-all-have-choices
+    description: All passages have choices
+    input: |
+      :: Start
+      Beginning.
+      + [Continue] -> Middle
+
+      :: Middle
+      Middle.
+      + [To End] -> End
+
+      :: End
+      End.
+      + [Restart] -> RESTART
+    expected:
+      valid: true
+      passages: 3
+    validation:
+      info:
+        - code: WLS-STR-006
+
+  - name: val-flw-001-end-target-ok
+    description: Passage with END target is acceptable
+    input: |
+      :: Start
+      Beginning.
+      + [End] -> END
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      info: []
+
+  - name: val-flw-001-intentional-ending
+    description: Intentional story ending (dead end is expected)
+    input: |
+      :: Start
+      A short story.
+      + [Read on] -> Ending
+
+      :: Ending
+      The End.
+      Thank you for reading.
+    expected:
+      valid: true
+      passages: 2
+    validation:
+      info:
+        - code: WLS-FLW-001
+          passageName: Ending
+    note: Dead ends may be intentional story endings

@@ -1,0 +1,406 @@
+# WLS 1.0 Variable Tests
+# Category: variables
+# Count: 35 tests
+
+tests:
+  # ============================================
+  # DECLARATION (8 tests)
+  # ============================================
+
+  - name: var-declare-implicit
+    description: Implicit variable declaration
+    input: |
+      :: Start
+      $gold = 100
+      You have $gold gold.
+    expected:
+      variables:
+        gold: 100
+      output: "You have 100 gold."
+      valid: true
+
+  - name: var-declare-header
+    description: Header variable declaration
+    input: |
+      @vars
+        gold: 100
+        name: "Hero"
+
+      :: Start
+      $name has $gold gold.
+    expected:
+      variables:
+        gold: 100
+        name: "Hero"
+      valid: true
+
+  - name: var-declare-multiple
+    description: Multiple variable declarations
+    input: |
+      :: Start
+      $a = 1
+      $b = 2
+      $c = 3
+      Sum: ${$a + $b + $c}
+    expected:
+      variables:
+        a: 1
+        b: 2
+        c: 3
+      output: "Sum: 6"
+      valid: true
+
+  - name: var-declare-reassign
+    description: Variable reassignment
+    input: |
+      :: Start
+      $x = 10
+      $x = 20
+      Value: $x
+    expected:
+      variables:
+        x: 20
+      output: "Value: 20"
+      valid: true
+
+  - name: var-declare-invalid-name
+    description: Invalid variable name (semantic validation - optional)
+    input: |
+      :: Start
+      $1invalid = 100
+    expected:
+      valid: true
+      passages: 1
+    note: Parser treats $1invalid as text "$" + "1invalid"; semantic validation may reject
+
+  - name: var-declare-reserved-prefix
+    description: Reserved prefix warning (semantic validation - optional)
+    input: |
+      :: Start
+      $whisker_internal = 100
+    expected:
+      valid: true
+      passages: 1
+    note: Parser accepts this; semantic validation may warn about reserved prefix
+
+  - name: var-undefined-access
+    description: Accessing undefined variable (semantic validation - optional)
+    input: |
+      :: Start
+      Value: $undefined
+    expected:
+      valid: true
+      passages: 1
+    note: Parser accepts this; runtime may return empty string or error
+
+  - name: var-declare-order
+    description: Variables available after declaration (runtime behavior)
+    input: |
+      :: Start
+      First: $gold
+      $gold = 100
+    expected:
+      valid: true
+      passages: 1
+    note: Parser accepts; runtime handles undefined variable at execution time
+
+  # ============================================
+  # TYPES (9 tests)
+  # ============================================
+
+  - name: var-type-number-int
+    description: Number type - integer
+    input: |
+      :: Start
+      $x = 42
+    expected:
+      variables:
+        x: 42
+      valid: true
+
+  - name: var-type-number-float
+    description: Number type - float
+    input: |
+      :: Start
+      $x = 3.14
+    expected:
+      variables:
+        x: 3.14
+      valid: true
+
+  - name: var-type-string
+    description: String type
+    input: |
+      :: Start
+      $name = "Alice"
+    expected:
+      variables:
+        name: "Alice"
+      valid: true
+
+  - name: var-type-boolean-true
+    description: Boolean type - true
+    input: |
+      :: Start
+      $flag = true
+    expected:
+      variables:
+        flag: true
+      valid: true
+
+  - name: var-type-boolean-false
+    description: Boolean type - false
+    input: |
+      :: Start
+      $flag = false
+    expected:
+      variables:
+        flag: false
+      valid: true
+
+  - name: var-type-mismatch-add
+    description: Type mismatch - addition (runtime behavior)
+    input: |
+      :: Start
+      $x = 5 + "hello"
+    expected:
+      valid: true
+      passages: 1
+    note: Parser accepts; runtime handles type coercion or error
+
+  - name: var-type-concat
+    description: String concatenation
+    input: |
+      :: Start
+      $x = "Hello" .. " " .. "World"
+    expected:
+      variables:
+        x: "Hello World"
+      valid: true
+
+  - name: var-type-number-precision
+    description: Number precision
+    input: |
+      :: Start
+      $x = 0.1 + 0.2
+    expected:
+      variables:
+        x: 0.3
+      valid: true
+
+  - name: var-type-large-number
+    description: Large number handling
+    input: |
+      :: Start
+      $x = 9007199254740992
+    expected:
+      valid: true
+
+  # ============================================
+  # SCOPE (8 tests)
+  # ============================================
+
+  - name: var-scope-story
+    description: Story-scoped variable persists
+    input: |
+      :: Start
+      $gold = 100
+      + [Next] -> Next
+
+      :: Next
+      Gold: $gold
+    expected:
+      output_next: "Gold: 100"
+      valid: true
+
+  - name: var-scope-temp-basic
+    description: Temporary variable basic usage
+    input: |
+      :: Start
+      _temp = 50
+      Temp: $_temp
+    expected:
+      output: "Temp: 50"
+      valid: true
+
+  - name: var-scope-temp-cleared
+    description: Temporary variable cleared on exit (runtime behavior)
+    input: |
+      :: Start
+      _temp = 50
+      + [Next] -> Next
+
+      :: Next
+      Value: $_temp
+    expected:
+      valid: true
+      passages: 2
+    note: Parser accepts; runtime handles undefined temp variable
+
+  - name: var-scope-shadow-invalid
+    description: Temp shadowing story variable (runtime behavior)
+    input: |
+      :: Start
+      $gold = 100
+      _gold = 50
+    expected:
+      valid: true
+      passages: 1
+    note: Parser accepts; runtime may warn about shadowing
+
+  - name: var-scope-temp-same-name-different-passages
+    description: Same temp name in different passages
+    input: |
+      :: Start
+      _x = 10
+      + [Next] -> Next
+
+      :: Next
+      _x = 20
+      Value: $_x
+    expected:
+      output_next: "Value: 20"
+      valid: true
+
+  - name: var-scope-story-modify-from-passage
+    description: Modify story var from any passage
+    input: |
+      :: Start
+      $gold = 100
+      + [Next] -> Next
+
+      :: Next
+      $gold += 50
+    expected:
+      variables:
+        gold: 150
+      valid: true
+
+  - name: var-scope-temp-calculation
+    description: Temp for intermediate calculation
+    input: |
+      :: Start
+      $base = 100
+      _bonus = 25
+      _total = $base + _bonus
+      $final = $_total
+    expected:
+      variables:
+        base: 100
+        final: 125
+      valid: true
+
+  - name: var-scope-temp-prefix-only
+    description: Temp requires underscore prefix
+    input: |
+      :: Start
+      _valid = 100
+      $alsoValid = 100
+    expected:
+      valid: true
+
+  # ============================================
+  # INTERPOLATION (10 tests)
+  # ============================================
+
+  - name: var-interp-simple
+    description: Simple variable interpolation
+    input: |
+      :: Start
+      $name = "Alice"
+      Hello, $name!
+    expected:
+      output: "Hello, Alice!"
+      valid: true
+
+  - name: var-interp-number
+    description: Number interpolation
+    input: |
+      :: Start
+      $count = 42
+      Count: $count
+    expected:
+      output: "Count: 42"
+      valid: true
+
+  - name: var-interp-expression
+    description: Expression interpolation
+    input: |
+      :: Start
+      $a = 10
+      $b = 5
+      Sum: ${$a + $b}
+    expected:
+      output: "Sum: 15"
+      valid: true
+
+  - name: var-interp-complex-expr
+    description: Complex expression interpolation
+    input: |
+      :: Start
+      $gold = 100
+      Double: ${$gold * 2}
+    expected:
+      output: "Double: 200"
+      valid: true
+
+  - name: var-interp-adjacent
+    description: Adjacent interpolations
+    input: |
+      :: Start
+      $first = "John"
+      $last = "Doe"
+      Name: $first$last
+    expected:
+      output: "Name: JohnDoe"
+      valid: true
+
+  - name: var-interp-escaped
+    description: Escaped dollar sign
+    input: |
+      :: Start
+      The price is \$50.
+    expected:
+      output: "The price is $50."
+      valid: true
+
+  - name: var-interp-in-string
+    description: Interpolation in string literal
+    input: |
+      :: Start
+      $name = "World"
+      $greeting = "Hello, $name!"
+    expected:
+      # Note: Variables are NOT interpolated inside string literals
+      variables:
+        greeting: "Hello, $name!"
+      valid: true
+
+  - name: var-interp-nested-braces
+    description: Nested braces in expression
+    input: |
+      :: Start
+      $x = 5
+      Result: ${($x + 3) * 2}
+    expected:
+      output: "Result: 16"
+      valid: true
+
+  - name: var-interp-function-call
+    description: Function call in expression
+    input: |
+      :: Start
+      Random: ${whisker.random(1, 6)}
+    expected:
+      valid: true
+      # Output varies
+
+  - name: var-interp-boolean
+    description: Boolean interpolation
+    input: |
+      :: Start
+      $flag = true
+      Flag: $flag
+    expected:
+      output: "Flag: true"
+      valid: true

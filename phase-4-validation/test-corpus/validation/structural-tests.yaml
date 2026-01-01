@@ -1,0 +1,300 @@
+# WLS 1.0 Structural Validation Tests
+# Category: validation/structural
+# Tests for: WLS-STR-001 through WLS-STR-006
+
+tests:
+  # ============================================
+  # WLS-STR-001: Missing Start Passage
+  # ============================================
+
+  - name: val-str-001-missing-start
+    description: Story with no Start passage (should fail)
+    input: |
+      :: NotStart
+      This is not the start.
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      errors:
+        - code: WLS-STR-001
+          severity: error
+      info:
+        - code: WLS-FLW-001
+          passageName: NotStart
+
+  - name: val-str-001-has-start
+    description: Story with Start passage (should pass)
+    input: |
+      :: Start
+      This is the start.
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      errors: []
+      info:
+        - code: WLS-FLW-001
+          passageName: Start
+
+  - name: val-str-001-start-directive
+    description: Story with @start directive
+    input: |
+      @start: Beginning
+
+      :: Beginning
+      This is the start.
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      errors: []
+      info:
+        - code: WLS-FLW-001
+          passageName: Beginning
+
+  # ============================================
+  # WLS-STR-002: Unreachable Passage
+  # ============================================
+
+  - name: val-str-002-unreachable
+    description: Story with unreachable passage
+    input: |
+      :: Start
+      The beginning.
+      + [Continue] -> End
+
+      :: End
+      The end.
+
+      :: Orphan
+      This passage cannot be reached.
+    expected:
+      valid: true
+      passages: 3
+    validation:
+      warnings:
+        - code: WLS-STR-002
+          passageName: Orphan
+      info:
+        - code: WLS-FLW-001
+          passageName: End
+        - code: WLS-FLW-001
+          passageName: Orphan
+        - code: WLS-STR-005
+          passageName: Orphan
+
+  - name: val-str-002-all-reachable
+    description: Story where all passages are reachable
+    input: |
+      :: Start
+      The beginning.
+      + [Go to Middle] -> Middle
+
+      :: Middle
+      The middle.
+      + [Go to End] -> End
+
+      :: End
+      The end.
+    expected:
+      valid: true
+      passages: 3
+    validation:
+      warnings: []
+      info:
+        - code: WLS-FLW-001
+          passageName: End
+        - code: WLS-FLW-002
+          passageName: Middle
+
+  - name: val-str-002-branching-reachable
+    description: Story with branching paths
+    input: |
+      :: Start
+      Choose a path.
+      + [Left] -> Left
+      + [Right] -> Right
+
+      :: Left
+      Left path.
+
+      :: Right
+      Right path.
+    expected:
+      valid: true
+      passages: 3
+    validation:
+      warnings: []
+      info:
+        - code: WLS-FLW-001
+          passageName: Left
+        - code: WLS-FLW-001
+          passageName: Right
+
+  - name: val-str-002-multiple-unreachable
+    description: Story with multiple unreachable passages
+    input: |
+      :: Start
+      Beginning.
+
+      :: Orphan1
+      Unreachable 1.
+
+      :: Orphan2
+      Unreachable 2.
+    expected:
+      valid: true
+      passages: 3
+    validation:
+      warnings:
+        - code: WLS-STR-002
+          passageName: Orphan1
+        - code: WLS-STR-002
+          passageName: Orphan2
+      info:
+        - code: WLS-FLW-001
+          passageName: Start
+        - code: WLS-FLW-001
+          passageName: Orphan1
+        - code: WLS-FLW-001
+          passageName: Orphan2
+        - code: WLS-STR-005
+          passageName: Orphan1
+        - code: WLS-STR-005
+          passageName: Orphan2
+
+  # ============================================
+  # WLS-STR-003: Duplicate Passage Names
+  # ============================================
+
+  - name: val-str-003-duplicate-names
+    description: Story with duplicate passage names
+    input: |
+      :: Start
+      First start.
+
+      :: Start
+      Second start.
+    expected:
+      valid: true
+      passages: 2
+    validation:
+      errors:
+        - code: WLS-STR-003
+          passageName: Start
+      info:
+        # Both duplicate Start passages are dead ends (no choices)
+        - code: WLS-FLW-001
+        - code: WLS-FLW-001
+        - code: WLS-STR-005
+
+  - name: val-str-003-duplicate-case-insensitive
+    description: Story with duplicate names (different case)
+    input: |
+      :: Start
+      First.
+
+      :: START
+      Second.
+
+      :: start
+      Third.
+    expected:
+      valid: true
+      passages: 3
+    validation:
+      errors:
+        - code: WLS-STR-003
+      info:
+        - code: WLS-FLW-001
+        - code: WLS-FLW-001
+        - code: WLS-FLW-001
+        - code: WLS-STR-005
+        - code: WLS-STR-005
+
+  - name: val-str-003-no-duplicates
+    description: Story with unique passage names
+    input: |
+      :: Start
+      Beginning.
+      + [Go to Middle] -> Middle
+
+      :: Middle
+      Middle.
+      + [Go to End] -> End
+
+      :: End
+      End.
+    expected:
+      valid: true
+      passages: 3
+    validation:
+      errors: []
+      info:
+        - code: WLS-FLW-001
+          passageName: End
+        - code: WLS-FLW-002
+          passageName: Middle
+
+  # ============================================
+  # WLS-STR-004: Empty Passage
+  # ============================================
+
+  - name: val-str-004-empty-content
+    description: Passage with no content
+    input: |
+      :: Start
+
+      + [Go] -> End
+
+      :: End
+      The end.
+    expected:
+      valid: true
+      passages: 2
+    validation:
+      warnings:
+        - code: WLS-STR-004
+          passageName: Start
+      info:
+        - code: WLS-FLW-001
+          passageName: End
+
+  - name: val-str-004-whitespace-only
+    description: Passage with only whitespace
+    input: |
+      :: Start
+
+      + [Go] -> End
+
+      :: End
+      The end.
+    expected:
+      valid: true
+      passages: 2
+    validation:
+      warnings:
+        - code: WLS-STR-004
+          passageName: Start
+      info:
+        - code: WLS-FLW-001
+          passageName: End
+
+  - name: val-str-004-has-content
+    description: Passage with content
+    input: |
+      :: Start
+      This passage has content.
+      + [Continue] -> End
+
+      :: End
+      The end.
+    expected:
+      valid: true
+      passages: 2
+    validation:
+      warnings: []
+      info:
+        - code: WLS-FLW-001
+          passageName: End

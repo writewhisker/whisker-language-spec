@@ -1,0 +1,316 @@
+# WLS 1.0 Link Validation Tests
+# Category: validation/links
+# Tests for: WLS-LNK-001 through WLS-LNK-005
+
+tests:
+  # ============================================
+  # WLS-LNK-001: Dead Link
+  # ============================================
+
+  - name: val-lnk-001-dead-link
+    description: Choice links to non-existent passage
+    input: |
+      :: Start
+      Beginning.
+      + [Go somewhere] -> NonExistent
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      errors:
+        - code: WLS-LNK-001
+          targetPassage: NonExistent
+      info:
+        - code: WLS-STR-006
+
+  - name: val-lnk-001-multiple-dead-links
+    description: Multiple choices link to non-existent passages
+    input: |
+      :: Start
+      Beginning.
+      + [Go to A] -> MissingA
+      + [Go to B] -> MissingB
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      errors:
+        - code: WLS-LNK-001
+          targetPassage: MissingA
+        - code: WLS-LNK-001
+          targetPassage: MissingB
+      info:
+        - code: WLS-STR-006
+
+  - name: val-lnk-001-valid-links
+    description: All links point to existing passages
+    input: |
+      :: Start
+      Beginning.
+      + [Continue] -> End
+
+      :: End
+      The end.
+    expected:
+      valid: true
+      passages: 2
+    validation:
+      errors: []
+      info:
+        - code: WLS-FLW-001
+          passageName: End
+
+  - name: val-lnk-001-special-target-valid
+    description: Special targets are not dead links
+    input: |
+      :: Start
+      Beginning.
+      + [End game] -> END
+      + [Go back] -> BACK
+      + [Restart] -> RESTART
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      errors: []
+
+  # ============================================
+  # WLS-LNK-002: Self-Link Without State Change
+  # ============================================
+
+  - name: val-lnk-002-self-link-no-action
+    description: Choice links to same passage without action
+    input: |
+      :: Start
+      Stuck in a loop.
+      + [Stay here] -> Start
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      warnings:
+        - code: WLS-FLW-004
+        - code: WLS-LNK-002
+      info:
+        - code: WLS-FLW-003
+        - code: WLS-STR-006
+
+  - name: val-lnk-002-self-link-with-action
+    description: Choice links to same passage with action (valid)
+    input: |
+      @var: count = 0
+
+      :: Start
+      Counter: $count
+      + [Increment]{do count = count + 1} -> Start
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      warnings: []
+      info:
+        - code: WLS-FLW-003
+        - code: WLS-STR-006
+
+  - name: val-lnk-002-multiple-self-links
+    description: Multiple self-links without actions
+    input: |
+      :: Start
+      Infinite loop.
+      + [Option 1] -> Start
+      + [Option 2] -> Start
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      warnings:
+        - code: WLS-FLW-004
+        - code: WLS-LNK-002
+        - code: WLS-LNK-002
+      info:
+        - code: WLS-FLW-003
+        - code: WLS-STR-006
+
+  # ============================================
+  # WLS-LNK-003: Special Target Wrong Case
+  # ============================================
+
+  - name: val-lnk-003-end-lowercase
+    description: Special target END with wrong case
+    input: |
+      :: Start
+      Beginning.
+      + [End] -> end
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      warnings:
+        - code: WLS-LNK-003
+          actual: end
+          expected: END
+      info:
+        - code: WLS-STR-006
+
+  - name: val-lnk-003-back-mixed-case
+    description: Special target BACK with wrong case
+    input: |
+      :: Start
+      Beginning.
+      + [Back] -> Back
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      warnings:
+        - code: WLS-LNK-003
+          actual: Back
+          expected: BACK
+      info:
+        - code: WLS-STR-006
+
+  - name: val-lnk-003-restart-lowercase
+    description: Special target RESTART with wrong case
+    input: |
+      :: Start
+      Beginning.
+      + [Restart] -> restart
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      warnings:
+        - code: WLS-LNK-003
+          actual: restart
+          expected: RESTART
+      info:
+        - code: WLS-STR-006
+
+  - name: val-lnk-003-correct-case
+    description: Special targets with correct case
+    input: |
+      :: Start
+      Beginning.
+      + [End] -> END
+      + [Back] -> BACK
+      + [Restart] -> RESTART
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      warnings: []
+
+  # ============================================
+  # WLS-LNK-004: BACK on Start Passage
+  # ============================================
+
+  - name: val-lnk-004-back-on-start
+    description: BACK target on start passage (only choice)
+    input: |
+      :: Start
+      Beginning.
+      + [Go back] -> BACK
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      warnings:
+        - code: WLS-LNK-004
+      info:
+        - code: WLS-STR-006
+
+  - name: val-lnk-004-back-on-start-multiple-choices
+    description: BACK target on start passage with other choices (allowed)
+    input: |
+      :: Start
+      Beginning.
+      + [Go back] -> BACK
+      + [Continue] -> Next
+
+      :: Next
+      Next passage.
+    expected:
+      valid: true
+      passages: 2
+    validation:
+      warnings: []
+      info:
+        - code: WLS-FLW-001
+          passageName: Next
+
+  - name: val-lnk-004-back-on-non-start
+    description: BACK target on non-start passage (valid)
+    input: |
+      :: Start
+      Beginning.
+      + [Continue] -> Second
+
+      :: Second
+      Second passage.
+      + [Go back] -> BACK
+    expected:
+      valid: true
+      passages: 2
+    validation:
+      warnings: []
+      info:
+        - code: WLS-STR-006
+
+  # ============================================
+  # WLS-LNK-005: Empty Choice Target
+  # ============================================
+
+  - name: val-lnk-005-empty-target
+    description: Choice with empty target
+    input: |
+      :: Start
+      Beginning.
+      + [Go nowhere]
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      errors:
+        - code: WLS-LNK-005
+      info:
+        - code: WLS-FLW-001
+          passageName: Start
+        - code: WLS-STR-006
+
+  - name: val-lnk-005-multiple-empty
+    description: Multiple choices with empty targets
+    input: |
+      :: Start
+      Beginning.
+      + [Option 1]
+      + [Option 2]
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      errors:
+        - code: WLS-LNK-005
+        - code: WLS-LNK-005
+      info:
+        - code: WLS-FLW-001
+          passageName: Start
+        - code: WLS-STR-006
+
+  - name: val-lnk-005-has-targets
+    description: All choices have targets
+    input: |
+      :: Start
+      Beginning.
+      + [Continue] -> End
+      + [End now] -> END
+
+      :: End
+      The end.
+    expected:
+      valid: true
+      passages: 2
+    validation:
+      errors: []
+      info:
+        - code: WLS-FLW-001
+          passageName: End

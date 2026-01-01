@@ -1,0 +1,238 @@
+# WLS 1.0 Variable Validation Tests
+# Category: validation/variables
+# Tests for: WLS-VAR-001 through WLS-VAR-003
+
+tests:
+  # ============================================
+  # WLS-VAR-001: Undefined Variable
+  # ============================================
+
+  - name: val-var-001-undefined-in-condition
+    description: Variable used in condition but not defined
+    input: |
+      @var: score = 0
+
+      :: Start
+      Your score is $score.
+      + [Check health]{if health > 0} -> Continue
+
+      :: Continue
+      Continue.
+    expected:
+      valid: true
+      passages: 2
+    validation:
+      errors:
+        - code: WLS-VAR-001
+          variableName: health
+      info:
+        - code: WLS-FLW-001
+          passageName: Continue
+
+  - name: val-var-001-undefined-in-action
+    description: Variable used in action but not defined
+    input: |
+      :: Start
+      Beginning.
+      + [Take action]{do karma = karma + 1} -> End
+
+      :: End
+      The end.
+    expected:
+      valid: true
+      passages: 2
+    validation:
+      errors:
+        - code: WLS-VAR-001
+          variableName: karma
+      info:
+        - code: WLS-FLW-001
+          passageName: End
+
+  - name: val-var-001-undefined-in-script
+    description: Variable used in onEnter script but not defined
+    input: |
+      :: Start
+      {do count = count + 1}
+      Count is now $count.
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      errors:
+        - code: WLS-VAR-001
+          variableName: count
+      info:
+        - code: WLS-FLW-001
+          passageName: Start
+
+  - name: val-var-001-all-defined
+    description: All variables properly defined
+    input: |
+      @var: score = 0
+      @var: health = 100
+
+      :: Start
+      Score: $score, Health: $health
+      + [Continue]{if health > 0} -> End {do score = score + 10}
+
+      :: End
+      Final score: $score
+    expected:
+      valid: true
+      passages: 2
+    validation:
+      errors: []
+      info:
+        - code: WLS-FLW-001
+          passageName: End
+
+  # ============================================
+  # WLS-VAR-002: Unused Variable
+  # ============================================
+
+  - name: val-var-002-unused
+    description: Variable defined but never used
+    input: |
+      @var: unused = 0
+      @var: used = 10
+
+      :: Start
+      Value is $used.
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      warnings:
+        - code: WLS-VAR-002
+          variableName: unused
+      info:
+        - code: WLS-FLW-001
+          passageName: Start
+
+  - name: val-var-002-multiple-unused
+    description: Multiple unused variables
+    input: |
+      @var: var1 = 0
+      @var: var2 = 0
+      @var: var3 = 0
+
+      :: Start
+      No variables used here.
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      warnings:
+        - code: WLS-VAR-002
+          variableName: var1
+        - code: WLS-VAR-002
+          variableName: var2
+        - code: WLS-VAR-002
+          variableName: var3
+      info:
+        - code: WLS-FLW-001
+          passageName: Start
+
+  - name: val-var-002-all-used
+    description: All variables are used
+    input: |
+      @var: x = 1
+      @var: y = 2
+
+      :: Start
+      Values: x=$x, y=$y
+      + [Modify]{if x > 0} -> End {do y = y + x}
+
+      :: End
+      Done.
+    expected:
+      valid: true
+      passages: 2
+    validation:
+      warnings: []
+      info:
+        - code: WLS-FLW-001
+          passageName: End
+
+  - name: val-var-002-used-in-condition
+    description: Variable used only in condition
+    input: |
+      @var: flag = true
+
+      :: Start
+      Check the flag.
+      + [Option]{if flag} -> End
+
+      :: End
+      Done.
+    expected:
+      valid: true
+      passages: 2
+    validation:
+      warnings: []
+      info:
+        - code: WLS-FLW-001
+          passageName: End
+
+  - name: val-var-002-used-in-action
+    description: Variable used only in action
+    input: |
+      @var: counter = 0
+
+      :: Start
+      Beginning.
+      + [Increment]{do counter = counter + 1} -> End
+
+      :: End
+      Done.
+    expected:
+      valid: true
+      passages: 2
+    validation:
+      warnings: []
+      info:
+        - code: WLS-FLW-001
+          passageName: End
+
+  # ============================================
+  # WLS-VAR-003: Invalid Variable Name
+  # ============================================
+
+  - name: val-var-003-starts-with-number
+    description: Variable name starting with number
+    input: |
+      @var: 1stVar = 0
+
+      :: Start
+      Invalid variable.
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      errors:
+        - code: WLS-VAR-003
+          variableName: 1stVar
+      info:
+        - code: WLS-FLW-001
+          passageName: Start
+
+  - name: val-var-003-valid-names
+    description: Valid variable names
+    input: |
+      @var: myVar = 0
+      @var: _private = 0
+      @var: camelCase = 0
+      @var: snake_case = 0
+      @var: var123 = 0
+
+      :: Start
+      All valid: $myVar $_private $camelCase $snake_case $var123
+    expected:
+      valid: true
+      passages: 1
+    validation:
+      errors: []
+      info:
+        - code: WLS-FLW-001
+          passageName: Start
