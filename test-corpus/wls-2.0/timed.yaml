@@ -1,181 +1,189 @@
-# WLS 2.0 Timed Content Tests
-# Tests for delayed and scheduled content delivery
+# WLS Timed Content Tests (Advanced Feature)
+# Tests for @delay, @every, and time-based content
 
-category: wls-2.0-timed
-version: "2.0"
-description: Timed content and scheduling tests
+- name: delay-basic
+  description: Basic delay directive
+  input: |
+    :: Start
+    Before.
+    @delay 100ms {
+    After delay.
+    }
+  play:
+    - wait: 50
+      output_not_contains: "After delay"
+    - wait: 100
+      output_contains: "After delay"
 
-tests:
-  # Basic delay
-  - name: delay-basic
-    description: Basic @delay directive
-    input: |
-      :: Start
-      Before.
-      @delay 100ms {
-      After delay.
-      }
-    play:
-      - wait: 50
-        output_not_contains: "After delay"
-      - wait: 100
-        output_contains: "After delay"
+- name: delay-seconds
+  description: Delay with seconds unit
+  input: |
+    :: Start
+    Starting.
+    @delay 1s {
+    One second later.
+    }
+  play:
+    - wait: 500
+      output_not_contains: "One second later"
+    - wait: 1000
+      output_contains: "One second later"
 
-  - name: delay-seconds
-    description: Delay with seconds unit
-    input: |
-      :: Start
-      Immediate.
-      @delay 1s {
-      Delayed one second.
-      }
-    expected:
-      valid: true
-      output_contains: "Immediate"
+- name: delay-nested
+  description: Nested delays
+  input: |
+    :: Start
+    First.
+    @delay 100ms {
+    Second.
+    @delay 100ms {
+    Third.
+    }
+    }
+  play:
+    - wait: 50
+      output_sequence: ["First"]
+    - wait: 100
+      output_sequence: ["First", "Second"]
+    - wait: 200
+      output_sequence: ["First", "Second", "Third"]
 
-  - name: delay-no-unit
-    description: Delay with milliseconds (no unit)
-    input: |
-      :: Start
-      @delay 500 {
-      Half second later.
-      }
-    expected:
-      valid: true
+- name: delay-with-variable
+  description: Delay duration from variable
+  input: |
+    :: Start
+    @set wait_time = 500
+    Starting.
+    @delay ${wait_time}ms {
+    After wait.
+    }
+  play:
+    - wait: 250
+      output_not_contains: "After wait"
+    - wait: 500
+      output_contains: "After wait"
 
-  # Repeating timer
-  - name: every-basic
-    description: Basic @every directive
-    input: |
-      :: Start
-      @every 1s {
-      Tick.
-      }
-    play:
-      - wait: 1000
-        output_contains: "Tick"
-      - wait: 2000
-        output_contains: "Tick"
+- name: every-basic
+  description: Repeating content with @every
+  input: |
+    :: Start
+    Clock starts.
+    @every 100ms {
+    Tick.
+    }
+  play:
+    - wait: 250
+      output_count: { "Tick": 2 }
 
-  - name: every-with-limit
-    description: @every with max fires
-    input: |
-      :: Start
-      @every 100ms max:3 {
-      Count.
-      }
-    play:
-      - wait: 350
-        output_count: 3
-        content: "Count"
+- name: every-with-limit
+  description: Limited repetitions with count option
+  input: |
+    :: Start
+    @every 100ms count: 3 {
+    Beep.
+    }
+  play:
+    - wait: 400
+      output_count: { "Beep": 3 }
 
-  # Timer control
-  - name: timer-cancel
-    description: Cancel a scheduled timer
-    input: |
-      :: Start
-      @delay 1s id:myTimer {
-      Should not appear.
-      }
-      {do whisker.timer.cancel("myTimer")}
-    play:
-      - wait: 1500
-        output_not_contains: "Should not appear"
+- name: every-cancel
+  description: Cancel repeating timer
+  input: |
+    :: Start
+    @every 100ms id: heartbeat {
+    Thump.
+    }
+    @delay 250ms {
+    @cancel heartbeat
+    Stopped.
+    }
+  play:
+    - wait: 150
+      output_contains: "Thump"
+    - wait: 350
+      output_contains: "Stopped"
 
-  - name: timer-pause-resume
-    description: Pause and resume timers
-    input: |
-      :: Start
-      @delay 500ms {
-      Delayed content.
-      }
-      {do whisker.timer.pause()}
-    play:
-      - wait: 600
-        output_not_contains: "Delayed content"
+- name: delay-pause-resume
+  description: Pausing and resuming timers
+  input: |
+    :: Start
+    @delay 200ms id: reveal {
+    Secret revealed!
+    }
+    @delay 100ms {
+    @pause reveal
+    }
+    @delay 300ms {
+    @resume reveal
+    }
+  play:
+    - wait: 500
+      output_contains: "Secret revealed!"
 
-  # Multiple timers
-  - name: timer-multiple
-    description: Multiple independent timers
-    input: |
-      :: Start
-      @delay 100ms {First.}
-      @delay 200ms {Second.}
-      @delay 300ms {Third.}
-    play:
-      - wait: 150
-        output_contains: "First"
-        output_not_contains: "Second"
-      - wait: 250
-        output_contains: "Second"
-      - wait: 350
-        output_contains: "Third"
+- name: delay-in-thread
+  description: Delay within spawned thread
+  input: |
+    :: Start
+    Main start.
+    -> Delayed
 
-  - name: timer-ordering
-    description: Timers fire in correct order
-    input: |
-      :: Start
-      @delay 300ms {Third.}
-      @delay 100ms {First.}
-      @delay 200ms {Second.}
-    expected:
-      output_sequence:
-        - "First"
-        - "Second"
-        - "Third"
+    == Delayed
+    @delay 100ms {
+    Thread delayed content.
+    }
+    -> END
+  play:
+    - wait: 150
+      output_contains: "Thread delayed content"
 
-  # Timer with callbacks
-  - name: timer-callback
-    description: Timer with onFire callback
-    input: |
-      :: Start
-      VAR count = 0
-      @every 100ms onFire:{do count += 1} {
-      Count: $count
-      }
-    play:
-      - wait: 350
-        output_contains: "Count: 3"
+- name: every-with-alternation
+  description: Repeating alternating content
+  input: |
+    :: Start
+    @every 100ms count: 4 {
+    {~|A|B|}
+    }
+  play:
+    - wait: 450
+      output_contains: ["A", "B"]
 
-  # Time string parsing
-  - name: timer-parse-ms
-    description: Parse milliseconds
-    input: |
-      :: Start
-      @delay 500ms {Done.}
-    expected:
-      valid: true
+- name: delay-choice-timeout
+  description: Timeout on choice
+  input: |
+    :: Start
+    Choose quickly!
+    @delay 500ms {
+    Too slow!
+    -> TimeUp
+    }
+    + [Act fast] -> Success
 
-  - name: timer-parse-seconds
-    description: Parse seconds
-    input: |
-      :: Start
-      @delay 2s {Done.}
-    expected:
-      valid: true
+    :: Success
+    You made it!
 
-  - name: timer-parse-minutes
-    description: Parse minutes
-    input: |
-      :: Start
-      @delay 1m {Done.}
-    expected:
-      valid: true
+    :: TimeUp
+    Time ran out.
+  expected:
+    valid: true
 
-  - name: timer-parse-hours
-    description: Parse hours
-    input: |
-      :: Start
-      @delay 1h {Done.}
-    expected:
-      valid: true
+- name: delay-zero
+  description: Zero delay executes immediately
+  input: |
+    :: Start
+    Before.
+    @delay 0ms {
+    After.
+    }
+  expected:
+    output_sequence: ["Before", "After"]
 
-  # Timer remaining time
-  - name: timer-remaining
-    description: Get remaining time for timer
-    input: |
-      :: Start
-      @delay 1s id:countdown {Done.}
-      Time left: ${whisker.timer.remaining("countdown")}
-    expected:
-      valid: true
+- name: every-single
+  description: Every with count:1 is like delay
+  input: |
+    :: Start
+    @every 100ms count: 1 {
+    Once.
+    }
+  play:
+    - wait: 150
+      output_count: { "Once": 1 }

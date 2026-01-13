@@ -1,8 +1,7 @@
-# WLS 2.0 Text Effects Tests
+# WLS Text Effects Tests (Advanced Feature)
 # Tests for text effects and transitions
 
-category: wls-2.0-text-effects
-version: "2.0"
+category: wls-text-effects
 description: Text effects and transitions tests
 
 tests:

@@ -1,85 +1,82 @@
-# WLS 2.0 Test Corpus
+# Advanced Features Test Corpus
 
-This directory contains test cases for all WLS 2.0 features.
+> **Note**: The `wls-2.0/` directory name is historical. WLS is now a **unified specification** with no version distinctions. These tests cover advanced features that are all part of the single WLS specification.
+
+This directory contains the comprehensive test corpus for advanced WLS features.
 
 ## Test Categories
 
-| File | Description | Tests |
-|------|-------------|-------|
-| `threads.yaml` | Thread spawning and parallel execution | 11 |
-| `state-machines.yaml` | LIST state machine operations | 13 |
-| `timed.yaml` | Timed content and scheduling | 14 |
-| `external.yaml` | External function binding | 14 |
-| `parameterized.yaml` | Parameterized passages | 14 |
-| `audio.yaml` | Audio/media API | 18 |
-| `text-effects.yaml` | Text effects and transitions | 17 |
+### threads.yaml
+Tests for parallel narrative thread execution:
+- Thread spawning with `==` syntax
+- Thread interleaving
+- Await and synchronization
+- Thread-local variables
+- Priority-based scheduling
 
-**Total: 101 tests**
+### state-machines.yaml
+Tests for LIST-based state management:
+- LIST definition and initialization
+- State transitions (+= -= ^=)
+- State queries (? !?)
+- Multi-LIST interactions
+- Exclusive/single-select LISTs
 
-## WLS 2.0 Features Covered
-
-### Threads (threads.yaml)
-- Thread passage declaration (`==` syntax)
-- Thread spawning from main narrative
-- Thread content interleaving
-- Await/spawn expressions
-- Thread priorities
-- Thread lifecycle management
-
-### LIST State Machines (state-machines.yaml)
-- Add state (`+=`)
-- Remove state (`-=`)
-- Check state (`?`)
-- Superset (`>=`) and subset (`<=`) checks
-- Equality (`==`)
-- Multiple active states
-- State machine patterns
-
-### Timed Content (timed.yaml)
+### timed.yaml
+Tests for time-based content:
 - `@delay` directive
-- `@every` repeating timer
-- Timer cancellation
-- Pause/resume
-- Multiple simultaneous timers
-- Time string parsing (ms, s, m, h)
+- `@every` repeating content
+- Timer pause/resume/cancel
+- Nested delays
+- Choice timeouts
 
-### External Functions (external.yaml)
-- EXTERNAL declarations
-- Function calls with parameters
-- Type checking (string, number, boolean, any)
-- Optional parameters
+### external.yaml
+Tests for host application integration:
+- `@external` function declarations
+- Namespaced functions
+- Type checking
 - Async functions
 - Error handling
 
-### Parameterized Passages (parameterized.yaml)
-- Passage parameters
+### effects.yaml
+Tests for text effects:
+- Typewriter effect
+- Fade in/out
+- Shake effect
+- Custom effect handlers
+- Effect chaining and cancellation
+
+### parameterized.yaml
+Tests for passage parameters:
+- Basic parameter passing
 - Default values
-- Multiple parameters
-- Parameter type handling
-- Tunnel calls with parameters
-- Choice links with parameters
-- Variable scope isolation
+- Typed parameters
+- Optional and rest parameters
+- Recursive passages
 
-### Audio API (audio.yaml)
-- Audio declarations
-- Playback control (play, stop, pause)
-- Volume control
-- Fade effects (fadeIn, fadeOut, crossfade)
-- Channel management (bgm, sfx, voice, ambient)
-- Master/channel volume
+### audio.yaml
+Tests for audio integration:
+- `@audio` declarations
+- Play/stop/pause
+- Volume and fading
+- Channels and crossfading
+- Autoplay on passage entry
 
-### Text Effects (text-effects.yaml)
-- Transitions (fade-in, slide-*)
-- Text effects (typewriter, shake, pulse, glitch)
-- Effect options (speed, delay, easing)
-- Custom styles
-- Progressive reveal
+### migration.yaml
+Tests for legacy syntax migration:
+- Reserved word renaming
+- Deprecated pattern detection
+- Tunnel interaction warnings
+- Structure preservation
 
 ## Running Tests
 
 ```bash
-cd /path/to/whisker-language-specification
+# Run all advanced feature tests
 ./tools/run-corpus.sh --category=wls-2.0
+
+# Run specific category
+./tools/run-corpus.sh wls-2.0/threads.yaml
 ```
 
 ## Test Format
@@ -88,17 +85,41 @@ Each test case follows this structure:
 
 ```yaml
 - name: test-name
-  description: Human-readable description
+  description: Brief description
   input: |
-    WLS source code
+    :: Start
+    Story content...
   expected:
-    valid: true/false
-    output_contains: "text"
-    output_sequence:
-      - "first"
-      - "second"
+    valid: true
+    output_contains: "expected text"
+  play:
+    - wait: 100
+      output_contains: "after delay"
 ```
 
-## Version
+### Common Assertions
 
-WLS 2.0
+- `valid: true/false` - Story parses correctly
+- `output_contains` - Output includes text
+- `output_not_contains` - Output excludes text
+- `output_sequence` - Text appears in order
+- `error_code` - Expected error code
+- `warning_code` - Expected warning code
+- `threads` - Expected thread count
+- `available_choices` - Number of available choices
+
+### Play Sequence
+
+For time-based tests:
+- `wait: <ms>` - Wait milliseconds
+- `choose: <index>` - Select choice
+- `output_*` - Check output state
+
+## Coverage Goals
+
+- All WLS advanced syntax features
+- Edge cases and error conditions
+- Cross-feature interactions
+- Migration scenarios
+
+Total: 100+ test cases across all categories

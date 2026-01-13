@@ -1,180 +1,169 @@
-# WLS 2.0 External Function Tests
-# Tests for host application function binding
+# WLS External Functions Tests (Advanced Feature)
+# Tests for @external declarations and host function integration
 
-category: wls-2.0-external
-version: "2.0"
-description: External function binding tests
+- name: external-call-basic
+  description: Basic external function call
+  input: |
+    @external greet(name: string): string
+    :: Start
+    ${greet("World")}
+  externals:
+    greet: "(name) => 'Hello, ' + name"
+  expected:
+    output_contains: "Hello, World"
 
-tests:
-  # Basic external calls
-  - name: external-call
-    description: Basic external function call
-    input: |
-      EXTERNAL greet(name: string): string
-      :: Start
-      ${greet("World")}
-    externals:
-      greet: "(name) => 'Hello, ' + name"
-    expected:
-      output_contains: "Hello, World"
+- name: external-multiple-params
+  description: External function with multiple parameters
+  input: |
+    @external add(a: number, b: number): number
+    :: Start
+    Result: ${add(5, 3)}
+  externals:
+    add: "(a, b) => a + b"
+  expected:
+    output_contains: "Result: 8"
 
-  - name: external-void
-    description: External function with no return
-    input: |
-      EXTERNAL log(message: string)
-      :: Start
-      {do log("Test message")}
-      Logged.
-    externals:
-      log: "(msg) => { console.log(msg) }"
-    expected:
-      output_contains: "Logged"
+- name: external-no-return
+  description: External function with no return value
+  input: |
+    @external logMessage(msg: string): void
+    :: Start
+    @do logMessage("Test log")
+    Logged.
+  externals:
+    logMessage: "(msg) => console.log(msg)"
+  expected:
+    output_contains: "Logged"
 
-  - name: external-multiple-params
-    description: External function with multiple parameters
-    input: |
-      EXTERNAL add(a: number, b: number): number
-      :: Start
-      Result: ${add(10, 20)}
-    externals:
-      add: "(a, b) => a + b"
-    expected:
-      output_contains: "Result: 30"
+- name: external-namespaced
+  description: Namespaced external functions
+  input: |
+    @external audio.play(track: string): void
+    @external audio.stop(): void
+    :: Start
+    @do audio.play("music.mp3")
+    Playing music.
+  externals:
+    "audio.play": "(track) => {}"
+    "audio.stop": "() => {}"
+  expected:
+    valid: true
 
-  # Type checking
-  - name: external-type-string
-    description: String parameter type
-    input: |
-      EXTERNAL echo(text: string): string
-      :: Start
-      ${echo("Hello")}
-    externals:
-      echo: "(t) => t"
-    expected:
-      output_contains: "Hello"
+- name: external-in-condition
+  description: External function result in condition
+  input: |
+    @external hasItem(name: string): boolean
+    :: Start
+    @if hasItem("key")
+      You have the key!
+    @endif
+  externals:
+    hasItem: "(name) => name === 'key'"
+  expected:
+    output_contains: "You have the key!"
 
-  - name: external-type-number
-    description: Number parameter type
-    input: |
-      EXTERNAL double(n: number): number
-      :: Start
-      ${double(21)}
-    externals:
-      double: "(n) => n * 2"
-    expected:
-      output_contains: "42"
+- name: external-in-choice
+  description: External function gates choice
+  input: |
+    @external canFly(): boolean
+    :: Start
+    + [Fly] @if canFly()
+      Soaring!
+    + [Walk]
+      Walking.
+  externals:
+    canFly: "() => true"
+  expected:
+    available_choices: 2
 
-  - name: external-type-boolean
-    description: Boolean parameter type
-    input: |
-      EXTERNAL not(b: boolean): boolean
-      :: Start
-      ${not(true)}
-    externals:
-      not: "(b) => !b"
-    expected:
-      output_contains: "false"
+- name: external-async
+  description: Async external function with await
+  input: |
+    @external fetchData(id: string): string [async]
+    :: Start
+    Data: ${await fetchData("123")}
+  externals:
+    fetchData: "(id) => Promise.resolve('Item ' + id)"
+  expected:
+    output_contains: "Data: Item 123"
 
-  - name: external-type-any
-    description: Any parameter type
-    input: |
-      EXTERNAL stringify(value: any): string
-      :: Start
-      ${stringify(42)}
-    externals:
-      stringify: "(v) => String(v)"
-    expected:
-      output_contains: "42"
+- name: external-error-handling
+  description: External function error is caught
+  input: |
+    @external riskyCall(): string
+    :: Start
+    @try
+      ${riskyCall()}
+    @catch
+      Something went wrong.
+    @endtry
+  externals:
+    riskyCall: "() => { throw new Error('Oops'); }"
+  expected:
+    output_contains: "Something went wrong"
 
-  # Optional parameters
-  - name: external-optional-param
-    description: Function with optional parameter
-    input: |
-      EXTERNAL greet(name: string, title?: string): string
-      :: Start
-      ${greet("Alice")}
-      ${greet("Bob", "Sir")}
-    externals:
-      greet: "(name, title) => title ? `Hello, ${title} ${name}` : `Hello, ${name}`"
-    expected:
-      output_contains: "Hello, Alice"
-      output_contains: "Hello, Sir Bob"
+- name: external-with-default
+  description: External function with default parameter
+  input: |
+    @external greet(name: string, greeting: string = "Hello"): string
+    :: Start
+    ${greet("Alice")}
+    ${greet("Bob", "Hi")}
+  externals:
+    greet: "(name, greeting) => greeting + ', ' + name + '!'"
+  expected:
+    output_contains: ["Hello, Alice!", "Hi, Bob!"]
 
-  # Error handling
-  - name: external-not-registered
-    description: Error when calling unregistered function
-    input: |
-      EXTERNAL unregistered(): string
-      :: Start
-      ${unregistered()}
-    expected:
-      has_error: true
-      error_contains: "not registered"
+- name: external-array-param
+  description: External function with array parameter
+  input: |
+    @external joinItems(items: string[]): string
+    :: Start
+    ${joinItems(["apple", "banana", "cherry"])}
+  externals:
+    joinItems: "(items) => items.join(', ')"
+  expected:
+    output_contains: "apple, banana, cherry"
 
-  - name: external-type-mismatch
-    description: Error when type doesn't match
-    input: |
-      EXTERNAL expectNumber(n: number): number
-      :: Start
-      ${expectNumber("not a number")}
-    externals:
-      expectNumber: "(n) => n"
-    expected:
-      has_error: true
+- name: external-object-return
+  description: External function returning object
+  input: |
+    @external getPlayer(): {name: string, level: number}
+    :: Start
+    Player: ${getPlayer().name} (Lv. ${getPlayer().level})
+  externals:
+    getPlayer: "() => ({name: 'Hero', level: 10})"
+  expected:
+    output_contains: "Player: Hero (Lv. 10)"
 
-  # Async functions
-  - name: external-async
-    description: Async external function
-    input: |
-      EXTERNAL fetchData(url: string): string
-      :: Start
-      ${fetchData("/api/data")}
-    externals:
-      fetchData: "async (url) => 'data from ' + url"
-    expected:
-      output_contains: "data from /api/data"
+- name: external-callback
+  description: External function with callback pattern
+  input: |
+    @external onComplete(callback: function): void
+    :: Start
+    Waiting for completion...
+    @do onComplete(() => "Done!")
+  externals:
+    onComplete: "(cb) => setTimeout(cb, 100)"
+  expected:
+    valid: true
 
-  # Multiple declarations
-  - name: external-multiple-decl
-    description: Multiple external declarations
-    input: |
-      EXTERNAL playSound(id: string)
-      EXTERNAL getUserName(): string
-      EXTERNAL saveScore(score: number)
-      :: Start
-      Welcome, ${getUserName()}!
-    externals:
-      playSound: "(id) => {}"
-      getUserName: "() => 'Player1'"
-      saveScore: "(s) => {}"
-    expected:
-      output_contains: "Welcome, Player1!"
+- name: external-undefined
+  description: Calling undefined external shows error
+  input: |
+    @external notImplemented(): void
+    :: Start
+    @do notImplemented()
+  expected:
+    error_code: "WLS-EXT-001"
 
-  # Do block usage
-  - name: external-do-block
-    description: External call in do block
-    input: |
-      EXTERNAL playSound(id: string)
-      :: Start
-      {do playSound("click")}
-      Sound played.
-    externals:
-      playSound: "(id) => {}"
-    expected:
-      output_contains: "Sound played"
-
-  - name: external-action-chain
-    description: Multiple external calls in sequence
-    input: |
-      EXTERNAL log(msg: string)
-      EXTERNAL increment(): number
-      VAR count = 0
-      :: Start
-      {do log("Starting")}
-      {do count = increment()}
-      Count: $count
-    externals:
-      log: "(msg) => {}"
-      increment: "() => 1"
-    expected:
-      output_contains: "Count: 1"
+- name: external-type-mismatch
+  description: Type mismatch in external call
+  input: |
+    @external add(a: number, b: number): number
+    :: Start
+    ${add("not", "numbers")}
+  externals:
+    add: "(a, b) => a + b"
+  expected:
+    error_code: "WLS-EXT-002"
