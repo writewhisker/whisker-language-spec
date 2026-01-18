@@ -696,7 +696,41 @@ ${$items[-1]}             // Also last element (negative indexing)
 **Negative indexing:**
 - `[-1]` = last element
 - `[-2]` = second-to-last
-- Out of bounds access returns nil
+- `[-n]` = nth element from end
+
+#### 4.14.3.1 Index Edge Cases
+
+| Scenario | Index | Array Length | Result | Notes |
+|----------|-------|--------------|--------|-------|
+| Valid positive | `[0]` | 3 | First element | 0-based indexing |
+| Valid positive | `[2]` | 3 | Third element | Last valid index |
+| Out of bounds | `[3]` | 3 | nil | No error, returns nil |
+| Valid negative | `[-1]` | 3 | Third element | Same as `[2]` |
+| Valid negative | `[-3]` | 3 | First element | Same as `[0]` |
+| Out of bounds negative | `[-4]` | 3 | nil | Exceeds array start |
+| Empty array | `[0]` | 0 | nil | All indices invalid |
+| Non-integer | `[1.5]` | 3 | Error | WLS-TYP-007 |
+| Non-numeric | `["key"]` | 3 | Error | WLS-TYP-007, use map for string keys |
+
+**Negative Index Calculation:**
+
+```
+effective_index = array_length + negative_index
+// [-1] on array of length 3: 3 + (-1) = 2 (last element)
+// [-3] on array of length 3: 3 + (-3) = 0 (first element)
+// [-4] on array of length 3: 3 + (-4) = -1 (out of bounds)
+```
+
+**Assignment to Out-of-Bounds Index:**
+
+```whisker
+ARRAY items = [1, 2, 3]
+{$items[10] = "x"}  // Error: WLS-TYP-007 (cannot assign to gap)
+{$items[-1] = "x"}  // Valid: sets last element to "x"
+{$items[-5] = "x"}  // Error: WLS-TYP-007 (negative overflow)
+```
+
+Implementations MUST NOT auto-expand arrays with nil/null gaps. Use explicit append operations for growth.
 
 ### 4.14.4 Array Operations
 

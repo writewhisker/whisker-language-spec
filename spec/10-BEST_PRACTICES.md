@@ -657,6 +657,197 @@ _tempGold = 50
 | **Performance** | Simple conditions, cache complex results |
 | **Testing** | Test all paths, check edge cases |
 
+## 10.11 Turn/Time Tracking
+
+### 10.11.1 Basic Turn Counting
+
+Track the passage of time through turns.
+
+```whisker
+--- story
+$turn = 0
+$hour = 8    // Start at 8 AM
+$day = 1
+---
+
+=== Any Passage ===
+{$turn += 1}
+{$hour += 1}
+{$hour >= 24}
+  {$hour = 0}
+  {$day += 1}
+{/}
+
+It is {$hour < 12: morning | $hour < 18: afternoon | evening} on day $day.
+
+// Time-gated content
+{$hour >= 22 or $hour < 6}
+  The streets are dark and empty.
+{/}
+```
+
+### 10.11.2 Scheduled Events
+
+```whisker
+--- story
+$turn = 0
+ARRAY scheduledEvents = []
+---
+
+FUNCTION scheduleEvent(turnNumber, eventName)
+  {{
+    local events = whisker.state.get("scheduledEvents")
+    table.insert(events, {turn = turnNumber, event = eventName})
+    whisker.state.set("scheduledEvents", events)
+  }}
+END
+
+:: StartQuest
+The merchant says "Come back in 3 turns for your order."
+{{ scheduleEvent(whisker.state.get("turn") + 3, "OrderReady") }}
+-> Town
+
+:: OrderReady
+@tags: scheduled
+The merchant waves you over. "Your order is ready!"
+```
+
+### 10.11.3 Countdown Timer
+
+```whisker
+$bombTimer = 10
+
+:: BombRoom
+@on-enter: {$bombTimer -= 1}
+
+{$bombTimer > 5}
+  The bomb beeps steadily. Plenty of time.
+{$bombTimer > 2}
+  The beeping is faster now. Hurry!
+{$bombTimer > 0}
+  BEEP BEEP BEEP! Almost out of time!
+{else}
+  -> Explosion
+{/}
+
+* [Cut the red wire] -> DefuseBomb
+* [Cut the blue wire] -> Explosion
+* [Run!] -> Escape
+```
+
+### 10.11.4 Time Formatting
+
+```whisker
+FUNCTION formatTime(hour, minute)
+  {{
+    local h = hour or whisker.state.get("hour")
+    local m = minute or 0
+    local period = h >= 12 and "PM" or "AM"
+    local displayHour = h % 12
+    if displayHour == 0 then displayHour = 12 end
+    return string.format("%d:%02d %s", displayHour, m, period)
+  }}
+END
+
+:: Clock
+The time is {{ formatTime() }}.
+```
+
+## 10.12 Stat Screen Pattern
+
+A common requirement is displaying character statistics accessible from any point in the story.
+
+### 10.12.1 Basic Stat Screen
+
+```whisker
+--- story
+$playerName = "Hero"
+$health = 100
+$maxHealth = 100
+$gold = 50
+$level = 1
+---
+
+=== StatScreen ===
+@tags: system, no-save
+
+╔══════════════════════════╗
+║     CHARACTER STATS      ║
+╠══════════════════════════╣
+║ Name:   $playerName      ║
+║ Level:  $level           ║
+║ Health: $health/$maxHealth  ║
+║ Gold:   $gold            ║
+╚══════════════════════════╝
+
++ [Return] ->-> // Tunnel back
+
+:: AnyPassage
+You see a door ahead.
++ [Check Stats] ->-> StatScreen
++ [Continue] -> NextRoom
+```
+
+### 10.12.2 Stat Screen with Inventory
+
+```whisker
+ARRAY inventory = []
+LIST equipped = sword, shield  // Currently equipped
+
+=== InventoryScreen ===
+@tags: system
+
+**Inventory** (${#$inventory} items)
+{ #$inventory == 0 }
+  Empty!
+{else}
+  {{
+    for i, item in ipairs(whisker.state.get("inventory")) do
+      whisker.output("- " .. item .. "\n")
+    end
+  }}
+{/}
+
+**Equipped**:
+{ $equipped ? sword } Sword (equipped) {/}
+{ $equipped ? shield } Shield (equipped) {/}
+
++ [Return] ->->
+```
+
+### 10.12.3 Tab-Based Stat Screen
+
+```whisker
+$currentTab = "stats"
+
+=== StatScreen ===
+@tags: system
+
+// Tab header
+[ {$currentTab == "stats"} **STATS** {else} Stats {/} ]
+[ {$currentTab == "inventory"} **INVENTORY** {else} Inventory {/} ]
+[ {$currentTab == "quests"} **QUESTS** {else} Quests {/} ]
+
+// Tab content
+{$currentTab == "stats"}
+  Name: $playerName
+  Health: $health / $maxHealth
+  Level: $level
+{$currentTab == "inventory"}
+  Gold: $gold coins
+  Items: ${#$inventory}
+{$currentTab == "quests"}
+  Active Quests: ${#$activeQuests}
+  Completed: ${#$completedQuests}
+{/}
+
+// Tab navigation
+* {$currentTab ~= "stats"} [View Stats] {$currentTab = "stats"} -> StatScreen
+* {$currentTab ~= "inventory"} [View Inventory] {$currentTab = "inventory"} -> StatScreen
+* {$currentTab ~= "quests"} [View Quests] {$currentTab = "quests"} -> StatScreen
++ [Close] ->->
+```
+
 ---
 
 **Previous Chapter:** [Examples](09-EXAMPLES.md)

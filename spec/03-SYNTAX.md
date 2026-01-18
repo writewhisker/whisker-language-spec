@@ -168,6 +168,49 @@ my-variable  // Contains hyphen
 my variable  // Contains space
 ```
 
+#### 3.4.3.1 Identifier Limits and Edge Cases
+
+**Length Requirements:**
+| Limit | Minimum | Recommended | Notes |
+|-------|---------|-------------|-------|
+| Identifier length | 255 chars | 1024 chars | Applies to all identifier types |
+| Nested scope depth | 16 levels | 64 levels | Function call depth |
+| Unique identifiers | 1,000 | 65,536 | Per compilation unit |
+
+**Reserved Identifier Patterns:**
+
+Identifiers matching these patterns have special meaning:
+- `_` (single underscore): Discard placeholder, cannot be referenced
+- `__*` (double underscore prefix): Reserved for implementation
+- `*__` (double underscore suffix): Reserved for implementation
+
+**Edge Cases:**
+
+| Input | Behavior | Error Code |
+|-------|----------|------------|
+| Empty string `""` | Error | WLS-SYN-020 |
+| Whitespace only | Error | WLS-SYN-020 |
+| Starts with digit | Error | WLS-SYN-021 |
+| Contains hyphen | Error | WLS-SYN-022 |
+| Unicode letters | Error (ASCII only) | WLS-SYN-023 |
+| Length > limit | Error | WLS-SYN-024 |
+| Reserved keyword | Error | WLS-SYN-025 |
+| `__reserved__` | Warning (reserved) | WLS-SYN-026 |
+
+**Identifier Shadowing:**
+
+Inner scopes may shadow outer scope identifiers:
+```whisker
+{let name = "outer"}
+{passage inner}
+  {let name = "inner"}  // Shadows outer 'name'
+  {name}                // Outputs "inner"
+{end}
+{name}                  // Outputs "outer"
+```
+
+Implementations SHOULD emit a warning for shadowed identifiers when enabled.
+
 ### 3.4.4 Literals
 
 #### Number Literals
@@ -585,6 +628,46 @@ $message = "She said \"Hello\""
 $path = "C:\\Program Files"
 ```
 
+### 3.11.3 Context-Specific Escaping
+
+| Context | Characters Requiring Escape |
+|---------|---------------------------|
+| Prose text | `$`, `{`, `}`, `\` |
+| String literals | `"`, `\`, `$` |
+| Choice text | `[`, `]`, `$`, `{`, `}` |
+| Comments | None (no escaping needed) |
+
+### 3.11.4 Unicode Escapes
+
+```whisker
+// Unicode code point escapes
+$heart = "\u{2764}"      // ❤
+$emoji = "\u{1F600}"     // 😀
+$nbsp = "\u{00A0}"       // Non-breaking space
+
+// Invalid Unicode escapes result in error WLS-SYN-004
+$bad = "\u{GGGGGG}"      // Error: invalid hex
+$bad = "\u{110000}"      // Error: code point > 10FFFF
+```
+
+### 3.11.5 Raw Strings
+
+For content with many special characters, use raw strings:
+
+```whisker
+$regex = `\d+\.\d+`      // No escaping needed
+$path = `C:\Users\Name`  // Backslashes literal
+$json = `{"key": "value"}`  // Braces literal
+```
+
+### 3.11.6 Invalid Escapes
+
+| Input | Behavior |
+|-------|----------|
+| `\x` (unknown) | Error WLS-SYN-004 |
+| `\` at end of line | Line continuation |
+| `\` at end of file | Error WLS-SYN-004 |
+
 ## 3.12 Embedded Lua
 
 ### 3.12.1 Inline Lua
@@ -746,6 +829,96 @@ passage = passage_header , { directive } , content ;
 content = { content_element } ;
 content_element = text | conditional | alternative | choice | assignment | link | embedded_lua ;
 ```
+
+## 3.17 Comprehensive Edge Cases
+
+This section consolidates edge case behaviors for all major constructs.
+
+### 3.17.1 String Edge Cases
+
+| Scenario | Input | Behavior | Error |
+|----------|-------|----------|-------|
+| Empty string | `""` | Valid, zero length | - |
+| Null character | `"\0"` | Error | WLS-SYN-040 |
+| Very long string | 10MB+ | Impl-dependent | WLS-LIM-001 |
+| Unclosed string | `"abc` | Error | WLS-SYN-003 |
+| Multiline unescaped | `"line1\nline2"` | Valid | - |
+| Raw string unclosed | `` `abc `` | Error | WLS-SYN-003 |
+
+### 3.17.2 Number Edge Cases
+
+| Scenario | Input | Behavior | Error |
+|----------|-------|----------|-------|
+| Leading zeros | `007` | Valid, equals 7 | - |
+| Trailing decimal | `42.` | Error | WLS-SYN-041 |
+| Leading decimal | `.5` | Error | WLS-SYN-041 |
+| Multiple decimals | `1.2.3` | Error | WLS-SYN-041 |
+| Hex notation | `0xFF` | Not supported | WLS-SYN-042 |
+| Scientific | `1e10` | Not supported | WLS-SYN-042 |
+| Infinity | `Infinity` | Via Lua only | - |
+| NaN | `NaN` | Via Lua only | - |
+
+### 3.17.3 Conditional Edge Cases
+
+| Scenario | Input | Behavior |
+|----------|-------|----------|
+| Empty condition | `{}` | Error WLS-SYN-043 |
+| Nested 10+ deep | `{{{...}}}` | Valid but perf warning |
+| Else without if | `{else}...{/}` | Error WLS-SYN-044 |
+| Multiple else | `{else}...{else}` | Error WLS-SYN-045 |
+| Unclosed | `{$x}...` | Error WLS-SYN-002 |
+| Empty branches | `{$x}{else}{/}` | Valid |
+
+### 3.17.4 Choice Edge Cases
+
+| Scenario | Input | Behavior |
+|----------|-------|----------|
+| Empty choice text | `* []` | Valid, invisible choice |
+| No target | `* [Go]` | Error WLS-NAV-001 |
+| Self-target | `* [Again] -> CurrentPassage` | Valid |
+| Recursive sticky | `+ [Loop] -> CurrentPassage` | Valid, shows each visit |
+| 1000+ choices | Large choice list | Valid, scroll warning |
+| Duplicate text | Two `* [Same]` | Valid, both shown |
+
+### 3.17.5 Navigation Edge Cases
+
+| Scenario | Input | Behavior |
+|----------|-------|----------|
+| Undefined passage | `-> Missing` | Error WLS-NAV-002 |
+| Empty passage name | `->` | Error WLS-SYN-046 |
+| Circular navigation | `A -> B -> A` | Valid, continues |
+| Deep tunnel stack | 100+ tunnels | Impl limit check |
+| END from tunnel | `-> END` inside `->->` | Ends story, clears stack |
+
+### 3.17.6 Variable Edge Cases
+
+| Scenario | Input | Behavior |
+|----------|-------|----------|
+| Undefined read | `{$missing}` | nil (no error) |
+| Type coercion | `{$num .. $str}` | Number to string |
+| Self-reference | `{$x = $x + 1}` | Valid |
+| Circular reference | Object A refs B refs A | Serialization error |
+| Reserved name | `{$__internal = 1}` | Warning |
+
+### 3.17.7 Whitespace Edge Cases
+
+| Scenario | Input | Behavior |
+|----------|-------|----------|
+| Tab vs spaces | Mixed | Warning (style) |
+| Trailing whitespace | `line   ` | Trimmed in output |
+| Leading whitespace | `   line` | Preserved |
+| Blank lines in prose | Multiple `\n\n` | Collapsed to one |
+| CRLF mixed with LF | Windows/Unix | Normalized |
+
+### 3.17.8 Comment Edge Cases
+
+| Scenario | Input | Behavior |
+|----------|-------|----------|
+| Nested `/* */` | `/* /* */ */` | Not nested, first `*/` ends |
+| Comment in string | `"/* not a comment */"` | String content |
+| Unclosed block | `/* no end` | Error WLS-SYN-047 |
+| Empty comment | `//` | Valid |
+| Comment at EOF | `// no newline` | Valid |
 
 ---
 
