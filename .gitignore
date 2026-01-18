@@ -19,3 +19,7 @@ Thumbs.db
 # Test artifacts
 *.log
 coverage/
+
+# Polecat sandbox infrastructure
+.beads/
+.runtime/
