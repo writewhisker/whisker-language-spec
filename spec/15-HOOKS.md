@@ -1,10 +1,10 @@
-# WLS Hooks System
+# Chapter 15: Hooks
 
-**Whisker Language Specification - Presentation Hooks**
+**Whisker Language Specification 1.0**
 
 ---
 
-## Overview
+## 15.1 Overview
 
 The hooks system extends WLS with presentation layer control, allowing dynamic modification of displayed content without changing the underlying story state. Hooks are named text regions that can be modified using hook operations.
 
@@ -492,10 +492,15 @@ The TypeScript parser does not yet generate `HookDefinitionNode` and `HookOperat
 
 ---
 
-## Adding Hooks to Stories
+## 15.14 Adding Hooks to Stories
 
 Hooks are optional presentation enhancements. To add hooks to a story:
 
 1. Identify text that should be dynamic
 2. Wrap in hook definition: `|name>[content]`
 3. Add operations in choices/actions: `@replace: name { new }`
+
+---
+
+**Previous Chapter:** [Developer Experience](14-DEVELOPER-EXPERIENCE.md)
+**Next:** [Appendices](APPENDICES.md)
