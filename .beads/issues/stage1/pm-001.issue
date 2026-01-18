@@ -1,0 +1,272 @@
+# Project Manager Evaluation: Whisker Language Specification
+
+**Evaluator**: Project Manager Persona
+**Date**: 2026-01-17
+**Specification Version**: WLS 1.0.0 (Commit e0479d9)
+
+---
+
+## Executive Summary
+
+The Whisker Language Specification is a **well-structured, comprehensive document** that covers the full scope of an interactive fiction language. From a project planning perspective, this specification is **largely ready for implementation planning**, though several areas require clarification before accurate sprint estimation can proceed.
+
+**Overall Readiness Score**: 7.5/10
+
+---
+
+## 1. Critical Issues
+
+### CRIT-001: Version Inconsistency Creates Confusion
+- **Category**: Inconsistency
+- **Severity**: Critical
+- **Location**: Introduction vs Overview sections
+- **Description**: The specification simultaneously claims to be "WLS 1.0" (Chapter 1) while stating there are "no version distinctions" (Overview). The Introduction states version "1.0.0, Draft" dated December 29, 2025, but the Overview states "Status: Final" dated 2026-01-12. This creates fundamental confusion about whether this spec is draft or final.
+- **Impact**: Cannot establish a baseline for conformance testing or release planning.
+- **Suggested Fix**: Consolidate versioning: Either commit to semantic versioning (WLS 1.0) or commit to unversioned (just "WLS"). Update all date/status references to be consistent.
+
+### CRIT-002: Undefined Scope Boundaries for Collections
+- **Category**: Omission
+- **Severity**: Critical
+- **Location**: Chapter 4 (Sections 4.13-4.15 - Lists, Arrays, Maps)
+- **Description**: The specification introduces LIST, ARRAY, and MAP types with substantial functionality, but these appear to have been added without corresponding:
+  - Formal grammar additions to GRAMMAR.ebnf
+  - Test corpus coverage verification
+  - API documentation in Chapter 7 (whisker.array.*, whisker.map.* mentioned but not fully specified)
+- **Impact**: Cannot estimate implementation effort for collection types. Dependency order unclear.
+- **Suggested Fix**: Either fully specify collection types with grammar, API, and tests, OR explicitly mark as "future extension" and remove from current spec scope.
+
+---
+
+## 2. Major Concerns
+
+### MAJ-001: Hooks System Integration Unclear
+- **Category**: Ambiguity
+- **Severity**: Major
+- **Location**: HOOKS.md referenced but integrated with main spec
+- **Description**: The hooks system (|hookName>, @replace, @append, etc.) is mentioned as "complete" in the overview but the integration with the main specification chapters is unclear. Chapter 13 (PRESENTATION) covers this but dependencies with other chapters are not mapped.
+- **Impact**: Cannot determine if hooks implementation can be parallelized with core features.
+- **Suggested Fix**: Add a dependency matrix showing which chapters depend on hooks and which can be implemented independently.
+
+### MAJ-002: Two Reference Implementations - Parity Requirements Unclear
+- **Category**: Ambiguity
+- **Severity**: Major
+- **Location**: Introduction and multiple references
+- **Description**: The spec states both whisker-core (Lua) and whisker-editor-web (TypeScript) are reference implementations that "MUST produce identical behavior." However, platform-specific features (like CSS transitions being "browser only") suggest there are allowed divergences. The exact scope of required parity vs. allowed platform differences is not defined.
+- **Impact**: Cannot plan parallel implementation tracks or determine which features are platform-optional.
+- **Suggested Fix**: Add a conformance matrix distinguishing "core conformance" (required for all) from "extended conformance" (platform-specific).
+
+### MAJ-003: Test Corpus Completeness Unknown
+- **Category**: Inadequacy
+- **Severity**: Major
+- **Location**: Test-corpus directory, spec validation chapter
+- **Description**: The spec mentions "250+ test cases" and "22 categories" but doesn't provide coverage metrics against the specification chapters. Unknown: Do tests cover all 56 error codes? All control flow patterns? All collection operations?
+- **Impact**: Cannot assess testing effort or identify gaps before implementation.
+- **Suggested Fix**: Add a test coverage matrix mapping tests to specification sections and error codes.
+
+### MAJ-004: Embedded Lua Security Model Incomplete
+- **Category**: Omission
+- **Severity**: Major
+- **Location**: Chapter 7, Section 7.9
+- **Description**: The sandboxing section lists restricted functions but doesn't specify:
+  - Memory limits (mentioned as "MAY limit" but no guidance)
+  - Execution time limits (mentioned as "MAY limit" but no guidance)
+  - Error recovery behavior when limits are hit
+- **Impact**: Security-sensitive implementations cannot rely on spec for threat model. Resource management is undefined.
+- **Suggested Fix**: Either specify limits with MUST/SHOULD requirements, or explicitly mark as "implementation-defined" with recommended ranges.
+
+### MAJ-005: Migration Path Complexity
+- **Category**: Usability
+- **Severity**: Major
+- **Location**: Section 1.8.1
+- **Description**: Breaking changes from "previous Whisker implementations" are listed, but:
+  - What were these previous implementations?
+  - Is there existing content to migrate?
+  - The migration tool mentioned is not specified
+- **Impact**: Cannot estimate migration effort for existing users (if any).
+- **Suggested Fix**: Clarify if there are existing implementations/content. If yes, specify migration tooling. If no, remove migration references.
+
+---
+
+## 3. Minor Issues
+
+### MIN-001: Gather Points and Tunnels Documentation
+- **Category**: Usability
+- **Severity**: Minor
+- **Location**: Chapter 5, Sections 5.9-5.10
+- **Description**: Gather points and tunnels are powerful features but appear late in the spec without early mention. Authors may not discover these features.
+- **Suggested Fix**: Add cross-references in Core Concepts chapter pointing to these advanced flow mechanisms.
+
+### MIN-002: Error Code Organization
+- **Category**: Usability
+- **Severity**: Minor
+- **Location**: Multiple chapters + APPENDIX-A-ERROR-CODES.md
+- **Description**: Error codes are scattered across chapters with a separate appendix. No single authoritative list with complete descriptions.
+- **Suggested Fix**: Consolidate all error codes into appendix with full descriptions; chapters can reference by code only.
+
+### MIN-003: Example Progression
+- **Category**: Usability
+- **Severity**: Minor
+- **Location**: Chapter 9 and examples/ directory
+- **Description**: Examples are categorized beginner/intermediate/advanced but mapping to specification features isn't clear.
+- **Suggested Fix**: Add a learning path that maps examples to specification chapters.
+
+### MIN-004: JSON Schema Availability
+- **Category**: Omission
+- **Severity**: Minor
+- **Location**: Section 8.3
+- **Description**: References `wls.schema.json` but doesn't specify where it's located or if it's complete.
+- **Suggested Fix**: Include schema location in spec and ensure it matches documented format.
+
+---
+
+## 4. Strengths
+
+### STR-001: Excellent Core Syntax Documentation
+The core syntax (Chapters 2-6) is exceptionally well-documented with:
+- Clear EBNF grammar
+- Abundant examples for each construct
+- Edge case coverage
+- Consistent formatting
+
+### STR-002: Comprehensive Lua API
+Chapter 7 provides thorough API documentation with:
+- Function signatures
+- Parameter types
+- Return values
+- Usage examples
+- Quick reference section
+
+### STR-003: Formal Grammar
+The 411-line EBNF grammar in GRAMMAR.ebnf provides an unambiguous parsing reference that implementation teams can use directly.
+
+### STR-004: Dual Format Support
+The text (.ws) and JSON format specifications enable:
+- Human-friendly authoring
+- Machine processing
+- Lossless round-trip conversion
+
+### STR-005: Error Code System
+56 error codes across 10 categories provide:
+- Consistent error reporting across implementations
+- Debugging guidance for authors
+- Validation test targets
+
+### STR-006: Test Corpus Foundation
+The existing test corpus provides a conformance baseline, even if coverage metrics need clarification.
+
+---
+
+## 5. Project Planning Assessment
+
+### 5.1 Scope Definition
+
+**Clearly In Scope:**
+- Text format parsing and rendering
+- Variable system (story and temp scope)
+- Control flow (conditionals, alternatives)
+- Choice system (once-only, sticky, conditional)
+- Basic Lua API (state, passage, history, choice)
+- Navigation (links, special targets)
+- JSON format conversion
+
+**Ambiguously Scoped:**
+- Collection types (LIST, ARRAY, MAP) - partially specified
+- Hooks system - specified but integration unclear
+- Asset handling - format defined but processing undefined
+- CSS transitions - platform-specific
+
+**Explicitly Out of Scope:**
+- Presentation/rendering (implementation-specific)
+- User interface design
+- Network protocols
+- Storage mechanisms beyond format
+
+### 5.2 Recommended Implementation Order
+
+Based on dependency analysis:
+
+**Phase 1: Core Parser**
+1. Lexer/tokenizer (Chapter 3)
+2. Expression parser (Chapter 3)
+3. Passage parser (Chapter 2, 3)
+4. Basic variable system (Chapter 4 - primitives only)
+
+**Phase 2: Runtime**
+1. State management (Chapter 4)
+2. Control flow (Chapter 5)
+3. Choice system (Chapter 6)
+4. Navigation (Chapter 2)
+
+**Phase 3: Scripting**
+1. Lua sandbox setup (Chapter 7.9)
+2. whisker.state API (Chapter 7.3)
+3. whisker.passage API (Chapter 7.4)
+4. whisker.history API (Chapter 7.5)
+5. whisker.choice API (Chapter 7.6)
+6. Top-level functions (Chapter 7.7)
+
+**Phase 4: Extended Features**
+1. Gather points and tunnels (Chapter 5.9-5.10)
+2. Collection types (Chapter 4.13-4.15) - pending clarification
+3. Hooks system (Chapter 13) - pending clarification
+
+**Phase 5: Tooling**
+1. JSON format (Chapter 8)
+2. Validation (Chapter 11)
+3. Format conversion
+
+### 5.3 Key Risks
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| Collection type scope creep | High | High | Resolve before sprint planning |
+| Lua sandbox vulnerabilities | Medium | Critical | Security review before deployment |
+| Cross-platform parity disputes | Medium | High | Define conformance matrix |
+| Grammar ambiguities discovered | Low | Medium | Build parser early, iterate |
+| Test corpus gaps | Medium | Medium | Coverage analysis sprint 1 |
+
+### 5.4 Estimation Feasibility
+
+**Can estimate accurately:**
+- Core parser implementation
+- Basic runtime features
+- Lua API integration
+- JSON format support
+
+**Cannot estimate without clarification:**
+- Collection type implementation
+- Hooks system complexity
+- Migration tooling (if needed)
+- Security hardening
+
+---
+
+## 6. Recommendations
+
+### Immediate Actions (Before Sprint Planning)
+
+1. **Resolve Critical Issues** - Version consistency and collection type scope must be addressed.
+
+2. **Create Conformance Matrix** - Define core vs. extended conformance for platform planning.
+
+3. **Map Test Coverage** - Identify gaps in test corpus before implementation begins.
+
+### Sprint 0 Activities
+
+1. **Parser Prototype** - Build minimal parser to validate grammar against edge cases.
+
+2. **Security Review** - Define Lua sandbox requirements with specific limits.
+
+3. **Dependency Mapping** - Create detailed chapter dependency graph.
+
+---
+
+## 7. Conclusion
+
+The Whisker Language Specification demonstrates significant maturity in core areas (syntax, API, formats) while showing gaps in newer features (collections, hooks integration). The specification is **ready for implementation planning** for core features (Chapters 1-7, 8) but requires clarification for extended features before those can be scheduled.
+
+**Recommendation**: Proceed with Phase 1-3 sprint planning. Schedule clarification sessions for collection types and hooks before Phase 4 planning.
+
+---
+
+*Evaluation complete. Issues require resolution tracking.*
