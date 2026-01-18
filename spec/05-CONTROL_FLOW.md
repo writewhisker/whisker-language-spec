@@ -449,6 +449,42 @@ The puzzle awaits your solution.
 {| the quick fox | a lazy dog | some random text }
 ```
 
+#### 5.4.6.1 Alternative Edge Cases
+
+| Scenario | Input | Behavior | Notes |
+|----------|-------|----------|-------|
+| Single option | `{| only }` | Error WLS-SYN-030 | Minimum 2 options required |
+| All empty | `{| | }` | Valid | Outputs empty string |
+| Trailing pipe | `{| a | b | }` | Valid | Third option is empty |
+| Leading pipe | `{| | a | b }` | Valid | First option is empty |
+| Whitespace only | `{|   |   }` | Valid | All options trim to empty |
+| No space around pipe | `{|a|b}` | Valid | Parsed correctly |
+| Nested braces | `{| {a} | b }` | Parsed as expression | `{a}` evaluates first |
+| Pipe in string | `{| "a\|b" | c }` | Valid | Escaped pipe is literal |
+| Unmatched quotes | `{| "abc | def }` | Error WLS-SYN-031 | Unterminated string |
+| Very many options | `{| a | b | ... }` (1000+) | Valid | No limit, but perf warning |
+
+**Exhausted Alternatives:**
+
+| Type | When Exhausted | Behavior |
+|------|----------------|----------|
+| Sequence `{|}` | All visited | Repeat last option forever |
+| Cycle `{&|}` | Never | Loops back to first |
+| Shuffle `{~|}` | All visited | Reshuffle and restart |
+| Once `{!|}` | All visited | Output empty string |
+
+**Nested Alternatives:**
+
+```whisker
+// Valid: alternatives can contain expressions
+{| {$name} says hello | {$other} waves }
+
+// Valid but not recommended: alternatives inside alternatives
+{| Option A with {| sub1 | sub2 } | Option B }
+```
+
+Nested alternatives have independent state tracking. The outer alternative increments once per visit; the inner alternative increments only when its branch is selected.
+
 ### 5.4.7 Tracking State
 
 Alternative state is tracked per passage and per alternative:

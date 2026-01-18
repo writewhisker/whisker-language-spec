@@ -17,6 +17,106 @@ The core concepts are:
 5. **Execution Model** - How stories run
 6. **Lifecycle Events** - Hooks for custom behavior
 
+### 2.1.1 Conceptual Diagrams
+
+**Story Structure:**
+```
+┌─────────────────────────────────────────────────────────┐
+│                        STORY                            │
+├─────────────────────────────────────────────────────────┤
+│  ┌─────────┐   ┌─────────┐   ┌─────────┐   ┌─────────┐ │
+│  │ Passage │──▶│ Passage │──▶│ Passage │──▶│ Passage │ │
+│  │ (Start) │   │         │   │         │   │  (End)  │ │
+│  └─────────┘   └────┬────┘   └─────────┘   └─────────┘ │
+│                     │                                   │
+│                     ▼                                   │
+│               ┌─────────┐                               │
+│               │ Passage │                               │
+│               │ (Branch)│                               │
+│               └─────────┘                               │
+├─────────────────────────────────────────────────────────┤
+│  Variables: $gold, $health, $inventory                  │
+│  State: visit counts, choice history                    │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Passage Lifecycle:**
+```
+┌──────────────┐
+│   ENTER      │  ← Player navigates to passage
+└──────┬───────┘
+       ▼
+┌──────────────┐
+│  on-enter    │  ← Hook executes (if defined)
+│    hook      │
+└──────┬───────┘
+       ▼
+┌──────────────┐
+│   RENDER     │  ← Content evaluated, output generated
+│   content    │
+└──────┬───────┘
+       ▼
+┌──────────────┐
+│   DISPLAY    │  ← Choices presented to player
+│   choices    │
+└──────┬───────┘
+       ▼
+┌──────────────┐
+│    WAIT      │  ← Await player input
+└──────┬───────┘
+       ▼
+┌──────────────┐
+│  on-exit     │  ← Hook executes (if defined)
+│    hook      │
+└──────┬───────┘
+       ▼
+┌──────────────┐
+│   NAVIGATE   │  ← Go to next passage
+└──────────────┘
+```
+
+**Choice Flow:**
+```
+    ┌─────────────────────────────────────┐
+    │           Current Passage           │
+    │                                     │
+    │  "You see two doors ahead."         │
+    │                                     │
+    │  ┌─────────────────────────────┐    │
+    │  │ * [Open left door]  -> Left │    │
+    │  │ * [Open right door] -> Right│    │
+    │  │ + [Examine room]    -> Here │    │
+    │  └─────────────────────────────┘    │
+    └───────────────┬─────────────────────┘
+                    │
+        ┌───────────┼───────────┐
+        ▼           ▼           ▼
+   ┌─────────┐ ┌─────────┐ ┌─────────┐
+   │  Left   │ │  Right  │ │  Here   │
+   │ (once)  │ │ (once)  │ │(sticky) │
+   └─────────┘ └─────────┘ └─────────┘
+```
+
+**Variable Scopes:**
+```
+┌─────────────────────────────────────────────────┐
+│                  STORY SCOPE                    │
+│  $globalVar = "accessible everywhere"           │
+│                                                 │
+│  ┌───────────────────────────────────────────┐  │
+│  │            PASSAGE SCOPE                  │  │
+│  │  {let localVar = "only in this passage"}  │  │
+│  │                                           │  │
+│  │  ┌─────────────────────────────────────┐  │  │
+│  │  │         CONDITIONAL SCOPE           │  │  │
+│  │  │  {if $cond}                         │  │  │
+│  │  │    {let innerVar = "nested scope"}  │  │  │
+│  │  │  {/}                                │  │  │
+│  │  └─────────────────────────────────────┘  │  │
+│  └───────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────┘
+```
+
 ## 2.2 Stories
 
 ### 2.2.1 Definition

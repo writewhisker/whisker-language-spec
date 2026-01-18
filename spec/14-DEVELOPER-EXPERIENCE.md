@@ -142,6 +142,75 @@ Returns: formatted greeting
 Defined at: line 15
 ```
 
+#### 14.2.3.1 Extended Hover Content
+
+**Keyword Hover:**
+
+| Keyword | Hover Content |
+|---------|---------------|
+| `if` | "Conditional block. Evaluates expression and executes body if truthy." |
+| `else` | "Alternative branch. Executes if preceding condition was false." |
+| `let` | "Local variable declaration. Scoped to current passage." |
+| `LIST` | "Enumerated set declaration. Use parentheses for initially active values." |
+| `INCLUDE` | "Import external Whisker module. Path relative to current file." |
+
+**Navigation Target Hover:**
+
+```
+-> Shop
+─────────────────────
+Target: :: Shop (line 145)
+Tags: [commerce, npc]
+Visit count: {runtime}
+Contains: 4 choices, 2 variables
+Preview:
+  "Welcome to the shop!
+   What would you like to buy?"
+```
+
+**Operator Hover:**
+
+| Operator | Hover Content |
+|----------|---------------|
+| `~=` | "Not equal. Alias: `!=`. Returns true if operands differ." |
+| `..` | "String concatenation. Joins two strings or coerces numbers." |
+| `?` | "Contains operator. For lists, checks if value is active." |
+| `#` | "Length operator. Returns count of elements in collection." |
+
+**Error Position Hover:**
+
+When hovering over an error-marked region:
+```
+[Error] WLS-SYN-002
+─────────────────────
+Unclosed brace
+Opened at line 10, column 5
+Expected: }
+Suggestion: Add closing brace
+Quick fix available: Insert "}"
+```
+
+#### 14.2.3.2 Hover Response Format
+
+```json
+{
+  "contents": {
+    "kind": "markdown",
+    "value": "**$gold** (story variable)\n\n---\n\nType: `number`\nInitial: `100`\nUsed in: 5 passages"
+  },
+  "range": {
+    "start": { "line": 10, "character": 5 },
+    "end": { "line": 10, "character": 10 }
+  }
+}
+```
+
+**Hover Priority** (when multiple hovers apply):
+1. Error/diagnostic information
+2. Symbol definition (variable, function, passage)
+3. Operator/keyword documentation
+4. Syntax structure explanation
+
 ### 14.2.4 Diagnostics
 
 Real-time diagnostics include:
@@ -406,6 +475,86 @@ The LSP enables integration with:
 - **Vim/Neovim**: Via coc.nvim or native LSP
 - **Emacs**: Via lsp-mode
 - **JetBrains**: Via LSP plugin
+
+### 14.5.5 Code Folding
+
+Code folding enables collapsing sections for improved navigation.
+
+**Foldable Regions:**
+
+| Region Type | Start Pattern | End Pattern | Example |
+|-------------|---------------|-------------|---------|
+| Passage | `:: Name` | Next `::` or EOF | `:: Kitchen` |
+| Conditional | `{$cond}` or `{if ...}` | `{/}` | `{$hasKey}...{/}` |
+| Block Lua | `{{` (with newline) | `}}` | `{{ ... }}` |
+| Function block | `FUNCTION name()` | `END` | Lua functions |
+| Choice block | First `*` or `+` | Gather or next section | Choice groups |
+| Comments | `/*` | `*/` | Block comments |
+
+**LSP Folding Range Request:**
+
+```json
+// textDocument/foldingRange response
+{
+  "result": [
+    {
+      "startLine": 10,
+      "startCharacter": 0,
+      "endLine": 25,
+      "endCharacter": 0,
+      "kind": "region",
+      "collapsedText": ":: Kitchen"
+    },
+    {
+      "startLine": 15,
+      "startCharacter": 0,
+      "endLine": 20,
+      "endCharacter": 3,
+      "kind": "region",
+      "collapsedText": "{if $hasKey}..."
+    }
+  ]
+}
+```
+
+**Folding Kind Mapping:**
+
+| WLS Construct | LSP FoldingRangeKind |
+|---------------|---------------------|
+| Passage | `region` |
+| Conditional | `region` |
+| Block comment | `comment` |
+| Imports | `imports` |
+| Block Lua | `region` |
+
+**Manual Fold Markers:**
+
+Authors may define custom fold regions with comments:
+
+```whisker
+// #region Inventory System
+$gold = 100
+$items = []
+// ... inventory code ...
+// #endregion
+
+// #region Combat
+$health = 100
+$attack = 10
+// #endregion
+```
+
+Implementations SHOULD recognize `#region` and `#endregion` comment markers.
+
+**Folding Behavior:**
+
+| Scenario | Behavior |
+|----------|----------|
+| Nested folds | All levels independently foldable |
+| Invalid syntax | Best-effort folding, may be incomplete |
+| Large passage | Fold entire passage from header |
+| Choice cascade | Fold from first choice to gather |
+| Cross-file reference | Not foldable (different document) |
 
 ## 14.6 Error Codes Reference
 
